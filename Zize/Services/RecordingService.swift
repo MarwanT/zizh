@@ -14,17 +14,23 @@ protocol RecordingService {
   var recordingFinishedPublisher: AnyPublisher<URL, Never> { get }
   func startRecording()
   func stopRecording()
+  func requestPermission() -> AnyPublisher<Bool, Never>
 }
 
 class AudioRecordingService: NSObject, RecordingService {
   @Published private(set) var isRecording: Bool = false
   private var recordingFinishedSubject: PassthroughSubject<URL, Never> = .init()
   private var recorder: AVAudioRecorder
+  private var recordsRepository: RecordsRepository
+  private var permissionsService: PermissionsService
   
-  init(recorder: AVAudioRecorder? = nil) throws {
+  init(recorder: AVAudioRecorder? = nil,
+       permissionService: PermissionsService = PermissionsService(),
+       recordsRepository: RecordsRepository = AudioRecordsRepository()) throws {
+    self.recordsRepository = recordsRepository
     self.recorder = try recorder ?? {
       let generatedRecorder = try AVAudioRecorder(
-        url: AudioRecordingService.temporaryRecordingFileURL,
+        url: recordsRepository.temporaryRecordingURL,
         settings: [
           AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
           AVSampleRateKey: 44100.0,
@@ -33,6 +39,7 @@ class AudioRecordingService: NSObject, RecordingService {
         ])
       return generatedRecorder
     }()
+    self.permissionsService = permissionService
     super.init()
     self.recorder.delegate = self
   }
@@ -51,6 +58,7 @@ class AudioRecordingService: NSObject, RecordingService {
     do {
       try audioSession.setCategory(.playAndRecord)
       try audioSession.setActive(true, options: [])
+      
       isRecording = true
       recorder.record()
     } catch {
@@ -63,9 +71,13 @@ class AudioRecordingService: NSObject, RecordingService {
     recorder.stop()
   }
   
+  func requestPermission() -> AnyPublisher<Bool, Never> {
+    return self.permissionsService.requestMicrophonePermission()
+  }
+  
   private func moveRecordingToDurableLocation() {
     let temporaryURL = recorder.url
-    let durableFileURL = AudioRecordingService.durableRecordingFileURL
+    let durableFileURL = recordsRepository.generateNewRecordingURL()
     do {
       try FileManager.default.moveItem(at: temporaryURL, to: durableFileURL)
       recordingFinishedSubject.send(durableFileURL)
@@ -73,20 +85,6 @@ class AudioRecordingService: NSObject, RecordingService {
       // TODO: Handle the error correctly, inform the user
       print("Error moving audio file: \(error)")
     }
-  }
-}
-
-// MARK: Static Methods
-extension AudioRecordingService {
-  private static var temporaryRecordingFileURL: URL {
-    return FileManager.default.temporaryDirectory.appendingPathComponent("temp.m4a")
-  }
-  
-  private static var durableRecordingFileURL: URL {
-    let now = Date().ISO8601Format()
-    return FileManager.default
-      .urls(for: .documentDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("\(now).m4a")
   }
 }
 
