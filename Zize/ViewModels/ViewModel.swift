@@ -11,15 +11,19 @@ import Combine
 class ViewModel: ObservableObject {
   @Published var isRecording: Bool = false
   
-  private var recordingService: RecordingService
+  private var recordingService: RecordingService!
   private var cancellables: Set<AnyCancellable> = []
   
-  init(recordingService: RecordingService) {
-    self.recordingService = recordingService
-    self.recordingService.isRecordingPublisher
-      .receive(on: DispatchQueue.main)
-      .assign(to: \.isRecording, on: self)
-      .store(in: &cancellables)
+  init (recordingService: RecordingService! = nil) {
+    do {
+      self.recordingService = try recordingService ?? AudioRecordingService()
+      self.recordingService.isRecordingPublisher
+        .receive(on: DispatchQueue.main)
+        .assign(to: \.isRecording, on: self)
+        .store(in: &cancellables)
+    } catch {
+      print("Error Initialising ViewModel: \(error)")
+    }
   }
   
   func toggleRecording() {
@@ -28,5 +32,11 @@ class ViewModel: ObservableObject {
     } else {
       recordingService.startRecording()
     }
+  }
+  
+  func requestPermissions() {
+    recordingService.requestPermission().sink { granted in
+      // TODO: Handle the granted/ungranted permission to the microphone
+    }.store(in: &cancellables)
   }
 }
