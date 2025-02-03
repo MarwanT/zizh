@@ -11,8 +11,8 @@ import Testing
 struct RecordingServiceTests {
   var sut: RecordingService!
   
-  init() {
-    sut = AudioRecordingService()
+  init() throws {
+    sut = try AudioRecordingService()
   }
   
   @Test
