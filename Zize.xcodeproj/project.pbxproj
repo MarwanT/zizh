@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		9C3814D02D51467800684022 /* ZizeTestPlan.xctestplan in Resources */ = {isa = PBXBuildFile; fileRef = 9C3814CF2D51467800684022 /* ZizeTestPlan.xctestplan */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		9C3814632D4A5D6900684022 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		9C3814522D4A5D6700684022 /* Zize.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zize.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C3814622D4A5D6900684022 /* ZizeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZizeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C38146C2D4A5D6900684022 /* ZizeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZizeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C3814CF2D51467800684022 /* ZizeTestPlan.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = ZizeTestPlan.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		9C3814492D4A5D6700684022 = {
 			isa = PBXGroup;
 			children = (
+				9C3814CF2D51467800684022 /* ZizeTestPlan.xctestplan */,
 				9C3814542D4A5D6700684022 /* Zize */,
 				9C3814652D4A5D6900684022 /* ZizeTests */,
 				9C38146F2D4A5D6900684022 /* ZizeUITests */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9C3814D02D51467800684022 /* ZizeTestPlan.xctestplan in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
