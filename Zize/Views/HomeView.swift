@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-  @StateObject private var viewModel: ViewModel = ViewModel()
+  @StateObject private var viewModel: HomeViewModel = HomeViewModel()
   
   var body: some View {
     ZStack {

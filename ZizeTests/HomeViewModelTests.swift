@@ -1,5 +1,5 @@
 //
-//  ViewModelTests.swift
+//  HomeViewModelTests.swift
 //  Zize
 //
 //  Created by Marwan Tutunji on 29/01/2025.
@@ -12,16 +12,16 @@ import Testing
 
 
 
-final class ViewModelTests {
+final class HomeViewModelTests {
   let mockRecordsRepository: MockRecordRepository
   let mockRecordingService: MockRecordingService
-  let sut: ViewModel
+  let sut: HomeViewModel
   var cancellables: Set<AnyCancellable> = []
   
   init() {
     mockRecordsRepository = MockRecordRepository()
     mockRecordingService = MockRecordingService(recordsRepository: mockRecordsRepository)
-    sut = ViewModel(recordingService: mockRecordingService, recordsRepository: mockRecordsRepository)
+    sut = HomeViewModel(recordingService: mockRecordingService, recordsRepository: mockRecordsRepository)
   }
   
   @Test

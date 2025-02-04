@@ -1,5 +1,5 @@
 //
-//  ViewModel.swift
+//  HomeViewModel.swift
 //  Zize
 //
 //  Created by Marwan Tutunji on 29/01/2025.
@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-class ViewModel: ObservableObject {
+class HomeViewModel: ObservableObject {
   @Published private(set) var isRecording: Bool = false
   @Published private(set) var recordings: [Recording] = []
   
