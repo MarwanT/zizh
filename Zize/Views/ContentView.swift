@@ -14,6 +14,11 @@ struct ContentView: View {
     ZStack {
       Color.black.ignoresSafeArea()
       VStack {
+        List {
+          ForEach(viewModel.recordings) { recording in
+            Text(recording.name)
+          }
+        }
         Spacer()
         Button {
           withAnimation(.easeOut(duration: 1)) {
@@ -28,6 +33,7 @@ struct ContentView: View {
       .padding()
       .task {
         viewModel.requestPermissions()
+        viewModel.syncRecordings()
       }
     }
   }

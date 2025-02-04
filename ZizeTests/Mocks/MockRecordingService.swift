@@ -20,7 +20,7 @@ class MockRecordingService: RecordingService {
     return $recordingFinishedURL.eraseToAnyPublisher()
   }
   
-  init() {
+  init(recordsRepository: any RecordsRepository = MockRecordRepository()) {
     recordingFinishedURL = FileManager.default.temporaryDirectory
   }
   

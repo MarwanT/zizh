@@ -5,6 +5,7 @@
 //  Created by Marwan Tutunji on 03/02/2025.
 //
 
+import Combine
 import Foundation
 
 struct AudioRecordsRepository: RecordsRepository {
@@ -32,8 +33,19 @@ struct AudioRecordsRepository: RecordsRepository {
     return recordingsURL
   }
   
-  func fetchRecords() -> [Record] {
-    return []
+  func fetchRecords() -> AnyPublisher<[Recording], Never> {
+    var recordings: [Recording]
+    do {
+      let filesURLs = try fileManager.contentsOfDirectory(atPath: persistedRecordingsURL.path())
+      recordings = filesURLs.map { recordName in
+        let audioRecording = AudioRecording(duration: 0, name: recordName, address: persistedRecordingsURL.appendingPathComponent(recordName))
+        return audioRecording
+      }
+    } catch {
+      recordings = []
+      print("An error occured while fetching recordings: \(error)")
+    }
+    return Just(recordings).eraseToAnyPublisher()
   }
   
   func generateNewRecordingURL() -> URL {

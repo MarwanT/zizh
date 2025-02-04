@@ -6,15 +6,22 @@
 //
 
 import Combine
+import Foundation
 import Testing
 @testable import Zize
 
+
+
 final class ViewModelTests {
-  let sut: ViewModel!
+  let mockRecordsRepository: MockRecordRepository
+  let mockRecordingService: MockRecordingService
+  let sut: ViewModel
+  var cancellables: Set<AnyCancellable> = []
   
   init() {
-    let mockRecordingService = MockRecordingService()
-    sut = ViewModel(recordingService: mockRecordingService)
+    mockRecordsRepository = MockRecordRepository()
+    mockRecordingService = MockRecordingService(recordsRepository: mockRecordsRepository)
+    sut = ViewModel(recordingService: mockRecordingService, recordsRepository: mockRecordsRepository)
   }
   
   @Test
@@ -34,5 +41,27 @@ final class ViewModelTests {
       values.append(value)
     }
     #expect(values == [true, false])
+  }
+  
+  @Test
+  func fetchRecordingsFromRepository_ManyRecordings() async {
+    // given
+    mockRecordsRepository.persistedRecords = MockData.recordings(count: 10) as! [AudioRecording]
+    // when
+    sut.syncRecordings()
+    let results = await sut.$recordings.values.first()!.map { $0 as! AudioRecording }
+    // then
+    #expect(mockRecordsRepository.persistedRecords == results)
+  }
+  
+  @Test
+  func fetchRecordingsFromRepository_NoRecordings() async {
+    // given
+    mockRecordsRepository.persistedRecords = MockData.recordings(count: 0) as! [AudioRecording]
+    // when
+    sut.syncRecordings()
+    let results = await sut.$recordings.values.first()!.map { $0 as! AudioRecording }
+    // then
+    #expect(mockRecordsRepository.persistedRecords == results)
   }
 }
