@@ -14,7 +14,7 @@ class ViewModel: ObservableObject {
   private var recordingService: RecordingService!
   private var cancellables: Set<AnyCancellable> = []
   
-  init (recordingService: RecordingService! = nil) {
+  init (recordingService: RecordingService? = nil) {
     do {
       self.recordingService = try recordingService ?? AudioRecordingService()
       self.recordingService.isRecordingPublisher
@@ -35,8 +35,11 @@ class ViewModel: ObservableObject {
   }
   
   func requestPermissions() {
-    recordingService.requestPermission().sink { granted in
-      // TODO: Handle the granted/ungranted permission to the microphone
-    }.store(in: &cancellables)
+    recordingService.requestPermission()
+      .receive(on: DispatchQueue.main)
+      .sink { granted in
+        // TODO: Handle the granted/ungranted permission to the microphone
+      }
+      .store(in: &cancellables)
   }
 }
