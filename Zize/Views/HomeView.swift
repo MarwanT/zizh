@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct HomeView: View {
   @StateObject private var viewModel: ViewModel = ViewModel()
   
   var body: some View {
@@ -40,5 +40,5 @@ struct ContentView: View {
 }
 
 #Preview {
-  ContentView()
+  HomeView()
 }
