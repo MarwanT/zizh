@@ -17,18 +17,19 @@ final class ViewModelTests {
     sut = ViewModel(recordingService: mockRecordingService)
   }
   
-  @Test func toggleRecordingStartsAndStopsRecording() async throws {
+  @Test
+  func toggleRecordingStartsAndStopsRecording() async throws {
     // given
     var values: [Bool] = []
     #expect(sut.isRecording == false)
     // when => then
     sut.toggleRecording()
-    await Task.sleep(500_000_000)
+    try await Task.sleep(nanoseconds: 500_000_000)
     for await value in sut.$isRecording.values.prefix(1) {
       values.append(value)
     }
     sut.toggleRecording()
-    await Task.sleep(500_000_000)
+    try await Task.sleep(nanoseconds: 500_000_000)
     for await value in sut.$isRecording.values.prefix(1) {
       values.append(value)
     }
