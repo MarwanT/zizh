@@ -1,0 +1,31 @@
+//
+//  AudioRecordingServiceTests.swift
+//  Zizh
+//
+//  Created by Marwan Tutunji on 29/01/2025.
+//
+
+import Testing
+@testable import Zizh
+
+struct RecordingServiceTests {
+  var sut: RecordingService!
+  
+  init() throws {
+    sut = try AudioRecordingService()
+  }
+  
+  @Test
+  func startRecording() async {
+    sut.startRecording()
+    let value = await sut.isRecordingPublisher.values.first()
+    #expect(value == true)
+  }
+  
+  @Test
+  func stopsRecording() async {
+    sut.stopRecording()
+    let value = await sut.isRecordingPublisher.values.first()
+    #expect(value == false)
+  }
+}
