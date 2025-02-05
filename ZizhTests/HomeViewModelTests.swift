@@ -44,23 +44,25 @@ final class HomeViewModelTests {
   }
   
   @Test
-  func fetchRecordingsFromRepository_ManyRecordings() async {
+  func fetchRecordingsFromRepository_ManyRecordings() async throws {
     // given
     mockRecordsRepository.persistedRecords = MockData.recordings(count: 10) 
     // when
     sut.syncRecordings()
     let results = await sut.$recordings.values.first()!.map { $0 }
+    try await Task.sleep(nanoseconds: 500_000_000)
     // then
     #expect(mockRecordsRepository.persistedRecords == results)
   }
   
   @Test
-  func fetchRecordingsFromRepository_NoRecordings() async {
+  func fetchRecordingsFromRepository_NoRecordings() async throws {
     // given
     mockRecordsRepository.persistedRecords = MockData.recordings(count: 0) 
     // when
     sut.syncRecordings()
     let results = await sut.$recordings.values.first()!.map { $0 }
+    try await Task.sleep(nanoseconds: 500_000_000)
     // then
     #expect(mockRecordsRepository.persistedRecords == results)
   }
