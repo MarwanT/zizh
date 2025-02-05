@@ -48,7 +48,6 @@ struct HomeView: View {
             .frame(width: 80, height: 80)
         }
       }
-      .padding()
       .task {
         viewModel.requestPermissions()
         viewModel.syncRecordings()
