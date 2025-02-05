@@ -15,23 +15,23 @@ protocol RecordingService {
   func startRecording()
   func stopRecording()
   func requestPermission() -> AnyPublisher<Bool, Never>
+  func getRecordingDuration(url: URL) async -> TimeInterval
 }
 
 class AudioRecordingService: NSObject, RecordingService {
   @Published private(set) var isRecording: Bool = false
   private var recordingFinishedSubject: PassthroughSubject<URL, Never> = .init()
   private var recorder: AVAudioRecorder
-  private var recordsRepository: RecordsRepository
+  private var fileManager: FileManagement
   private var permissionsService: PermissionsService
   
   init(recorder: AVAudioRecorder? = nil,
-       permissionService: PermissionsService = PermissionsService(),
-       recordsRepository: RecordsRepository? = nil) throws {
-    let recordsRepository = try recordsRepository ?? AudioRecordsRepository()
-    self.recordsRepository = recordsRepository
+       fileManager: FileManagement = FileManager.default,
+       permissionService: PermissionsService = PermissionsService()) throws {
+    self.fileManager = fileManager
     self.recorder = try recorder ?? {
       let generatedRecorder = try AVAudioRecorder(
-        url: recordsRepository.temporaryRecordingURL,
+        url: fileManager.temporaryRecordingURL,
         settings: [
           AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
           AVSampleRateKey: 44100.0,
@@ -76,9 +76,15 @@ class AudioRecordingService: NSObject, RecordingService {
     return self.permissionsService.requestMicrophonePermission()
   }
   
+  func getRecordingDuration(url: URL) async -> TimeInterval {
+    let asset = AVURLAsset(url: url)
+    let duration = try? await asset.load(.duration)
+    return CMTimeGetSeconds(duration ?? CMTime(seconds: 0, preferredTimescale: 1))
+  }
+  
   private func moveRecordingToDurableLocation() {
     let temporaryURL = recorder.url
-    let durableFileURL = recordsRepository.generateNewRecordingURL()
+    let durableFileURL = fileManager.generateNewRecordingURL()
     do {
       try FileManager.default.moveItem(at: temporaryURL, to: durableFileURL)
       recordingFinishedSubject.send(durableFileURL)

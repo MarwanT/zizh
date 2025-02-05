@@ -8,69 +8,92 @@
 import Combine
 import Foundation
 
-class AudioRecordsRepository: RecordsRepository {  
-  private var fileManager: FileManager
+class AudioRecordsRepository: RecordsRepository {
   private var dataPersistence: DataPersistenceService
+  private var fileManager: FileManagement
   
   private var cancellables: Set<AnyCancellable> = []
   
-  init(fileManager: FileManager = FileManager.default, dataPersistence: DataPersistenceService? = nil) throws {
-    self.fileManager = fileManager
+  init(dataPersistence: DataPersistenceService? = nil, fileManager: FileManagement = FileManager.default) throws {
     self.dataPersistence = try dataPersistence ?? SwiftDataService()
+    self.fileManager = fileManager
   }
   
-  var temporaryRecordingURL: URL {
-    return fileManager.temporaryDirectory.appendingPathComponent("temp.m4a")
-  }
-  
-  var persistedRecordingsURL: URL {
-    let recordingsURL = fileManager
-      .urls(for: .documentDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("AudioRecordings", isDirectory: true)
-    if !fileManager.fileExists(atPath: recordingsURL.path()) {
-      do {
-        try fileManager.createDirectory(at: recordingsURL, withIntermediateDirectories: true)
-      } catch {
-        // TODO: Handle the directory creation error in a better way
-        print("Error creating the recordings directory: \(error)")
-      }
-    }
-    return recordingsURL
-  }
-  
-  func fetchRecords() -> AnyPublisher<[Recording], Never> {
-    var recordings: [Recording]
-    do {
-      let filesURLs = try fileManager.contentsOfDirectory(atPath: persistedRecordingsURL.path())
-      recordings = filesURLs.map { recordName in
-        let audioRecording = AudioRecording(duration: 0, name: recordName, address: persistedRecordingsURL.appendingPathComponent(recordName))
-        return audioRecording
-      }.sorted { $0.name > $1.name }
-    } catch {
-      recordings = []
-      print("An error occured while fetching recordings: \(error)")
-    }
-    return Just(recordings).eraseToAnyPublisher()
-  }
-  
-  func generateNewRecordingURL() -> URL {
-    let now = Date().ISO8601Format()
-    return persistedRecordingsURL.appendingPathComponent("\(now).m4a")
-  }
-  
-  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RecordingError> {
-    return Future<Void, RecordingError> { [weak self] promise in
+  func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+    return Future<Void, RepositoryError> { [weak self] promise in
       guard let self = self else {
         promise(.failure(.repositoryDeallocated))
         return
       }
-      do {
-        try self.fileManager.removeItem(at: recording.address)
-        promise(.success(()))
-      } catch {
-        print("An Error occured while deleting recording: \(error)")
-        promise(.failure(.deletionFailed(error)))
+      Task { @MainActor in
+        self.dataPersistence.add(item: recording)
+          .receive(on: DispatchQueue.main)
+          .sink { completion in
+            switch completion {
+            case .failure(let error):
+              print("Error adding recording: \(error)")
+            case .finished:
+              break
+            }
+          } receiveValue: {
+            promise(.success(()))
+          }
+          .store(in: &(self.cancellables))
       }
     }.eraseToAnyPublisher()
   }
+  
+  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+    return Future<Void, RepositoryError> { [weak self] promise in
+      guard let self = self else {
+        promise(.failure(.repositoryDeallocated))
+        return
+      }
+      Task { @MainActor in
+        self.dataPersistence.remove(item: recording)
+          .receive(on: DispatchQueue.main)
+          .sink { completion in
+            switch completion {
+            case .failure(let error):
+              print("Error deleting recording: \(error)")
+            case .finished:
+              break
+            }
+          } receiveValue: {
+            // TODO: Delete the audio file
+            self.fileManager.deleteRecording(at: recording.address)
+            promise(.success(()))
+          }
+          .store(in: &(self.cancellables))
+      }
+    }.eraseToAnyPublisher()
+  }
+  
+  func fetchRecords() -> AnyPublisher<[Recording], RepositoryError> {
+    return Future<[Recording], RepositoryError> { [weak self] promise in
+      guard let self = self else {
+        promise(.failure(.repositoryDeallocated))
+        return
+      }
+      Task { @MainActor in
+        let sorting = Sorting<Recording>(\Recording.createdAt, order: .reverse)
+        self.dataPersistence.fetchAll(Recording.self, sortBy: [sorting])
+          .receive(on: DispatchQueue.main)
+          .sink { completion in
+            switch completion {
+            case .failure(let error):
+              print("Error fetching recordings: \(error)")
+            case .finished:
+              break
+            }
+          } receiveValue: { recordings in
+            promise(.success(recordings))
+          }
+          .store(in: &(self.cancellables))
+        
+      }
+    }.eraseToAnyPublisher()
+  }
+  
+  
 }

@@ -9,14 +9,12 @@ import Combine
 import Foundation
 
 protocol RecordsRepository {
-  var temporaryRecordingURL: URL { get }
-  var persistedRecordingsURL: URL { get }
-  func fetchRecords() -> AnyPublisher<[Recording], Never>
-  func generateNewRecordingURL() -> URL
-  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RecordingError>
+  func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError>
+  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError>
+  func fetchRecords() -> AnyPublisher<[Recording], RepositoryError>
 }
 
-enum RecordingError: Error {
+enum RepositoryError: Error {
     case repositoryDeallocated
     case deletionFailed(Error)
 }

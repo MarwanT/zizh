@@ -30,8 +30,8 @@ final class MockRecordRepository: RecordsRepository {
       .appendingPathComponent("newRecortd.m4a")
   }
   
-  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RecordingError> {
-    return Future<Void, RecordingError> { [unowned self] promise in
+  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+    return Future<Void, RepositoryError> { [unowned self] promise in
       persistedRecords = persistedRecords.filter({ current in
         return current.id != recording.id
       })
