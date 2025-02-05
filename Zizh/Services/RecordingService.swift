@@ -26,7 +26,8 @@ class AudioRecordingService: NSObject, RecordingService {
   
   init(recorder: AVAudioRecorder? = nil,
        permissionService: PermissionsService = PermissionsService(),
-       recordsRepository: RecordsRepository = AudioRecordsRepository()) throws {
+       recordsRepository: RecordsRepository? = nil) throws {
+    let recordsRepository = try recordsRepository ?? AudioRecordsRepository()
     self.recordsRepository = recordsRepository
     self.recorder = try recorder ?? {
       let generatedRecorder = try AVAudioRecorder(

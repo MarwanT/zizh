@@ -20,7 +20,7 @@ extension ViewModel {
     
     init (recordingService: RecordingService? = nil, recordsRepository: (any RecordsRepository)? = nil) {
       do {
-        self.recordsRepository = recordsRepository ?? AudioRecordsRepository()
+        self.recordsRepository = try recordsRepository ?? AudioRecordsRepository()
         self.recordingService = try recordingService ?? AudioRecordingService(recordsRepository: self.recordsRepository)
         
         // Observe isRecording changes
@@ -38,6 +38,7 @@ extension ViewModel {
           .store(in: &cancellables)
       } catch {
         print("Error Initialising ViewModel: \(error)")
+        exit(1)
       }
     }
     

@@ -10,11 +10,13 @@ import Foundation
 
 class AudioRecordsRepository: RecordsRepository {  
   private var fileManager: FileManager
+  private var dataPersistence: DataPersistenceService
   
   private var cancellables: Set<AnyCancellable> = []
   
-  init(fileManager: FileManager = FileManager.default) {
+  init(fileManager: FileManager = FileManager.default, dataPersistence: DataPersistenceService? = nil) throws {
     self.fileManager = fileManager
+    self.dataPersistence = try dataPersistence ?? SwiftDataService()
   }
   
   var temporaryRecordingURL: URL {
