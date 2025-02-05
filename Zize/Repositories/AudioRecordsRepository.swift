@@ -8,8 +8,11 @@
 import Combine
 import Foundation
 
-struct AudioRecordsRepository: RecordsRepository {
+class AudioRecordsRepository: RecordsRepository {  
   private var fileManager: FileManager
+  
+  private var cancellables: Set<AnyCancellable> = []
+  
   init(fileManager: FileManager = FileManager.default) {
     self.fileManager = fileManager
   }
@@ -40,7 +43,7 @@ struct AudioRecordsRepository: RecordsRepository {
       recordings = filesURLs.map { recordName in
         let audioRecording = AudioRecording(duration: 0, name: recordName, address: persistedRecordingsURL.appendingPathComponent(recordName))
         return audioRecording
-      }
+      }.sorted { $0.name > $1.name }
     } catch {
       recordings = []
       print("An error occured while fetching recordings: \(error)")
@@ -52,4 +55,25 @@ struct AudioRecordsRepository: RecordsRepository {
     let now = Date().ISO8601Format()
     return persistedRecordingsURL.appendingPathComponent("\(now).m4a")
   }
+  
+  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RecordingError> {
+    return Future<Void, RecordingError> { [weak self] promise in
+      guard let self = self else {
+        promise(.failure(.repositoryDeallocated))
+        return
+      }
+      do {
+        try self.fileManager.removeItem(at: recording.address)
+        promise(.success(()))
+      } catch {
+        print("An Error occured while deleting recording: \(error)")
+        promise(.failure(.deletionFailed(error)))
+      }
+    }.eraseToAnyPublisher()
+  }
+}
+
+enum RecordingError: Error {
+    case repositoryDeallocated
+    case deletionFailed(Error)
 }

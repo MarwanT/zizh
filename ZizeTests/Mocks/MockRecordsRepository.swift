@@ -29,4 +29,13 @@ final class MockRecordRepository: RecordsRepository {
       .appendingPathComponent("AudioRecordings")
       .appendingPathComponent("newRecortd.m4a")
   }
+  
+  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RecordingError> {
+    return Future<Void, RecordingError> { [unowned self] promise in
+      persistedRecords = persistedRecords.filter({ current in
+        return current.id != recording.id
+      })
+      promise(.success(()))
+    }.eraseToAnyPublisher()
+  }
 }

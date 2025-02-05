@@ -11,6 +11,7 @@ import Combine
 class HomeViewModel: ObservableObject {
   @Published private(set) var isRecording: Bool = false
   @Published private(set) var recordings: [Recording] = []
+  @Published var deletionErrorMessage: IdentifiableMessages? = nil
   
   private var recordingService: RecordingService!
   private var recordsRepository: any RecordsRepository
@@ -39,14 +40,6 @@ class HomeViewModel: ObservableObject {
     }
   }
   
-  func toggleRecording() {
-    if (isRecording) {
-      recordingService.stopRecording()
-    } else {
-      recordingService.startRecording()
-    }
-  }
-  
   func requestPermissions() {
     recordingService.requestPermission()
       .receive(on: DispatchQueue.main)
@@ -63,5 +56,39 @@ class HomeViewModel: ObservableObject {
         self.recordings = recordings
       }
       .store(in: &cancellables)
+  }
+  
+  func toggleRecording() {
+    if (isRecording) {
+      recordingService.stopRecording()
+    } else {
+      recordingService.startRecording()
+    }
+  }
+  
+  func deleteRecording(at offsets: IndexSet) {
+    for index in offsets {
+      let recording = recordings[index]
+      recordsRepository.deleteRecording(recording)
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] completion in
+          switch completion {
+          case .failure(let error):
+            switch error {
+            case .repositoryDeallocated:
+              self?.deletionErrorMessage = IdentifiableMessages(message: "Failed to delete recording for repository is deallocated!")
+            case .deletionFailed(let deapError):
+              print("Failed to delete recording: \(error)")
+              self?.deletionErrorMessage = IdentifiableMessages(message: "Failed to delete recording: \(error.localizedDescription)")
+            }
+          case .finished:
+            break
+          }
+        } receiveValue: { [weak self] _ in
+          guard let self = self else { return }
+          self.recordings.remove(at: index)
+        }
+        .store(in: &cancellables)
+    }
   }
 }

@@ -46,10 +46,10 @@ final class HomeViewModelTests {
   @Test
   func fetchRecordingsFromRepository_ManyRecordings() async {
     // given
-    mockRecordsRepository.persistedRecords = MockData.recordings(count: 10) as! [AudioRecording]
+    mockRecordsRepository.persistedRecords = MockData.recordings(count: 10) 
     // when
     sut.syncRecordings()
-    let results = await sut.$recordings.values.first()!.map { $0 as! AudioRecording }
+    let results = await sut.$recordings.values.first()!.map { $0 }
     // then
     #expect(mockRecordsRepository.persistedRecords == results)
   }
@@ -57,11 +57,26 @@ final class HomeViewModelTests {
   @Test
   func fetchRecordingsFromRepository_NoRecordings() async {
     // given
-    mockRecordsRepository.persistedRecords = MockData.recordings(count: 0) as! [AudioRecording]
+    mockRecordsRepository.persistedRecords = MockData.recordings(count: 0) 
     // when
     sut.syncRecordings()
-    let results = await sut.$recordings.values.first()!.map { $0 as! AudioRecording }
+    let results = await sut.$recordings.values.first()!.map { $0 }
     // then
     #expect(mockRecordsRepository.persistedRecords == results)
+  }
+  
+  @Test
+  func deleteRecordingSuccessfully() async throws {
+    // given
+    mockRecordsRepository.persistedRecords = MockData.recordings(count: 11)
+    let deletedRecordingIndex = 1
+    let deletedRecording = mockRecordsRepository.persistedRecords[deletedRecordingIndex]
+    sut.syncRecordings()
+    try await Task.sleep(nanoseconds: 500_000_000)
+    // when
+    sut.deleteRecording(at: IndexSet([deletedRecordingIndex]))
+    // then
+    #expect(mockRecordsRepository.persistedRecords.count == 10)
+    #expect(!mockRecordsRepository.persistedRecords.contains(deletedRecording))
   }
 }

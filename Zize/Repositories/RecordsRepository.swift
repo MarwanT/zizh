@@ -13,4 +13,5 @@ protocol RecordsRepository {
   var persistedRecordingsURL: URL { get }
   func fetchRecords() -> AnyPublisher<[Recording], Never>
   func generateNewRecordingURL() -> URL
+  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RecordingError>
 }

@@ -15,9 +15,27 @@ struct HomeView: View {
       Color.black.ignoresSafeArea()
       VStack {
         List {
-          ForEach(viewModel.recordings) { recording in
-            Text(recording.name)
+          ForEach(viewModel.recordings, id: \.id) { recording in
+            HStack {
+              VStack(alignment: .leading) {
+                Text("\(recording.name)")
+                  .font(.headline)
+                Text("\(recording.duration, specifier: "%.2f") sec")
+                  .font(.subheadline)
+                  .foregroundColor(Color.gray)
+              }
+              Spacer()
+              Text(recording.createdAt, style: .date)
+                .font(.caption)
+                .foregroundColor(.gray)
+            }
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())  // Ensures the whole row is tappable
+            .onTapGesture {
+              // TODO: Handle the taping geture here
+            }
           }
+          .onDelete(perform: viewModel.deleteRecording)
         }
         Spacer()
         Button {
@@ -35,6 +53,9 @@ struct HomeView: View {
         viewModel.requestPermissions()
         viewModel.syncRecordings()
       }
+    }
+    .alert(item: $viewModel.deletionErrorMessage) { errorMessage in
+      Alert(title: Text("Error"), message: Text(errorMessage.message), dismissButton: .default(Text("OK")))
     }
   }
 }
