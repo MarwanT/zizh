@@ -15,3 +15,8 @@ protocol RecordsRepository {
   func generateNewRecordingURL() -> URL
   func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RecordingError>
 }
+
+enum RecordingError: Error {
+    case repositoryDeallocated
+    case deletionFailed(Error)
+}

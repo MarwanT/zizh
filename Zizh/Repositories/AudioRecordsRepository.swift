@@ -72,8 +72,3 @@ class AudioRecordsRepository: RecordsRepository {
     }.eraseToAnyPublisher()
   }
 }
-
-enum RecordingError: Error {
-    case repositoryDeallocated
-    case deletionFailed(Error)
-}
