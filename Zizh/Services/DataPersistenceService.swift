@@ -11,20 +11,20 @@ import SwiftData
 
 typealias Persistable = SwiftData.PersistentModel
 
-enum DataPersistanceError: Error {
+enum DataPersistenceError: Error {
   case failedToFetchData(Error)
   case serviceDeallocated
 }
 
 @MainActor
-protocol DataPersistanceService {
+protocol DataPersistenceService {
   func add(item: any Persistable)
   func remove(item: any Persistable)
-  func fetchAll<T: Persistable>(_ type: T.Type, sortBy: [SortDescriptor<T>]) -> AnyPublisher<[T], DataPersistanceError>
-  func fetchAll<T: Persistable>(_ type: T.Type) -> AnyPublisher<[T], DataPersistanceError>
+  func fetchAll<T: Persistable>(_ type: T.Type, sortBy: [SortDescriptor<T>]) -> AnyPublisher<[T], DataPersistenceError>
+  func fetchAll<T: Persistable>(_ type: T.Type) -> AnyPublisher<[T], DataPersistenceError>
 }
 
-class SwiftDataService: DataPersistanceService {
+class SwiftDataService: DataPersistenceService {
   let modelContainer: ModelContainer
   let mainContext: ModelContext
   
@@ -44,12 +44,12 @@ class SwiftDataService: DataPersistanceService {
     mainContext.delete(item)
   }
   
-  func fetchAll<T>(_ type: T.Type) -> AnyPublisher<[T], DataPersistanceError> where T : PersistentModel {
+  func fetchAll<T>(_ type: T.Type) -> AnyPublisher<[T], DataPersistenceError> where T : PersistentModel {
     return fetchAll(type, sortBy: [])
   }
   
-  func fetchAll<T>(_ type: T.Type, sortBy: [SortDescriptor<T>] = []) -> AnyPublisher<[T], DataPersistanceError> where T : PersistentModel {
-    return Future<[T], DataPersistanceError> { [weak self] promise in
+  func fetchAll<T>(_ type: T.Type, sortBy: [SortDescriptor<T>] = []) -> AnyPublisher<[T], DataPersistenceError> where T : PersistentModel {
+    return Future<[T], DataPersistenceError> { [weak self] promise in
       let descriptor = FetchDescriptor<T>(sortBy: sortBy)
       do {
         guard let self = self else {
