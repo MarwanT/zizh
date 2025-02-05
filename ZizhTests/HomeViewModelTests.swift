@@ -15,13 +15,13 @@ import Testing
 final class HomeViewModelTests {
   let mockRecordsRepository: MockRecordRepository
   let mockRecordingService: MockRecordingService
-  let sut: HomeViewModel
+  let sut: ViewModel.Home
   var cancellables: Set<AnyCancellable> = []
   
   init() {
     mockRecordsRepository = MockRecordRepository()
     mockRecordingService = MockRecordingService(recordsRepository: mockRecordsRepository)
-    sut = HomeViewModel(recordingService: mockRecordingService, recordsRepository: mockRecordsRepository)
+    sut = ViewModel.Home(recordingService: mockRecordingService, recordsRepository: mockRecordsRepository)
   }
   
   @Test
