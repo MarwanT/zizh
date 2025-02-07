@@ -11,23 +11,24 @@ import Foundation
 
 final class MockRecordRepository: RecordsRepository {
   var persistedRecords: [Recording] = []
+
+  var fileManagement: any Zizh.FileManagement
   
-  var temporaryRecordingURL: URL {
-    return FileManager.default.temporaryDirectory.appendingPathComponent("temp.m4a")
+  init(fileManagement: FileManagement = MockFileManagement()) {
+    self.fileManagement = fileManagement
   }
   
-  var persistedRecordingsURL: URL {
-    return FileManager.default.temporaryDirectory.appendingPathComponent("AudioRecordings", isDirectory: true)
+  func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+    return Future<Void, RepositoryError> { [unowned self] promise in
+      persistedRecords.append(recording)
+      promise(.success(()))
+    }.eraseToAnyPublisher()
   }
   
-  func fetchRecords() -> AnyPublisher<[Recording], Never> {
-    return Just(persistedRecords).eraseToAnyPublisher()
-  }
-  
-  func generateNewRecordingURL() -> URL {
-    return FileManager.default.temporaryDirectory
-      .appendingPathComponent("AudioRecordings")
-      .appendingPathComponent("newRecortd.m4a")
+  func fetchRecords() -> AnyPublisher<[Recording], RepositoryError> {
+    return Future<[Recording], RepositoryError> { [unowned self] promise in
+      promise(.success(self.persistedRecords))
+    }.eraseToAnyPublisher()
   }
   
   func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {

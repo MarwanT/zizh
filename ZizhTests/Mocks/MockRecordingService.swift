@@ -20,7 +20,7 @@ class MockRecordingService: RecordingService {
     return $recordingFinishedURL.eraseToAnyPublisher()
   }
   
-  init(recordsRepository: any RecordsRepository = MockRecordRepository()) {
+  init() {
     recordingFinishedURL = FileManager.default.temporaryDirectory
   }
   
@@ -30,9 +30,14 @@ class MockRecordingService: RecordingService {
   
   func stopRecording() {
     isRecording = false
+    recordingFinishedURL = FileManager.default.temporaryDirectory
   }
   
   func requestPermission() -> AnyPublisher<Bool, Never> {
     return Just(true).eraseToAnyPublisher()
+  }
+  
+  func getRecordingDuration(url: URL) async -> TimeInterval {
+    return 10
   }
 }
