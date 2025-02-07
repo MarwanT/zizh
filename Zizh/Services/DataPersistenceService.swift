@@ -22,6 +22,7 @@ protocol DataPersistenceService {
   @MainActor func remove(item: any Persistable) -> AnyPublisher<Void, DataPersistenceError>
   @MainActor func fetchAll<T: Persistable>(_ type: T.Type) -> AnyPublisher<[T], DataPersistenceError>
   @MainActor func fetchAll<T: Persistable>(_ type: T.Type, sortBy: [Sorting<T>]) -> AnyPublisher<[T], DataPersistenceError>
+  @MainActor func fetch<T: Persistable>(_ type: T.Type, predicate: Predicate<T>?, sortBy: [Sorting<T>]) -> AnyPublisher<[T], DataPersistenceError>
 }
 
 class SwiftDataService: DataPersistenceService {
@@ -54,17 +55,21 @@ class SwiftDataService: DataPersistenceService {
   }
   
   func fetchAll<T>(_ type: T.Type, sortBy: [Sorting<T>] = []) -> AnyPublisher<[T], DataPersistenceError> where T : PersistentModel {
+    return fetch(type, predicate: nil, sortBy: sortBy)
+  }
+  
+  func fetch<T>(_ type: T.Type, predicate: Predicate<T>?, sortBy: [Sorting<T>]) -> AnyPublisher<[T], DataPersistenceError> where T : PersistentModel {
     return Future<[T], DataPersistenceError> { [weak self] promise in
-      let descriptor = FetchDescriptor<T>(sortBy: sortBy)
+      guard let self = self else {
+        promise(.failure(.serviceDeallocated))
+        return
+      }
       do {
-        guard let self = self else {
-          promise(.failure(.serviceDeallocated))
-          return
-        }
-        let results = try self.modelContainer.mainContext.fetch(descriptor)
+        let fetchDescriptor = FetchDescriptor<T>(predicate: predicate, sortBy: sortBy)
+        let results = try self.modelContainer.mainContext.fetch(fetchDescriptor)
         promise(.success(results))
       } catch {
-        print("Error occured while trying to fetch data for type \(type) from the store : \(error)")
+        print("Error occured while trying to fetch data for type \(type) with predicates \(String(describing: predicate)) from the store : \(error)")
         promise(.failure(.failedToFetchData(error)))
       }
     }.eraseToAnyPublisher()
