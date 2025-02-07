@@ -14,9 +14,9 @@ class AudioRecordsRepository: RecordsRepository {
   
   private var cancellables: Set<AnyCancellable> = []
   
-  init(dataPersistence: DataPersistenceService? = nil, fileManager: FileManagement = DefaultFileManagement()) throws {
+  init(dataPersistence: DataPersistenceService? = nil, fileManagement: FileManagement = DefaultFileManagement()) throws {
     self.dataPersistence = try dataPersistence ?? SwiftDataService()
-    self.fileManagement = fileManager
+    self.fileManagement = fileManagement
   }
   
   func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
