@@ -8,13 +8,6 @@
 import Testing
 @testable import Zizh
 
-class MockMicrophonePermissionProvider: MicrophonePermissionProvider {
-  var permissionResult: Bool = false
-  func requestPermission(_ completion: @escaping (Bool) -> Void) {
-    completion(permissionResult)
-  }
-}
-
 struct PermissionsServiceTests {
   let mockProvider: MockMicrophonePermissionProvider
   let sut: PermissionsService
