@@ -10,13 +10,13 @@ import Foundation
 
 class AudioRecordsRepository: RecordsRepository {
   private var dataPersistence: DataPersistenceService
-  private(set) var fileManager: FileManagement
+  private(set) var fileManagement: FileManagement
   
   private var cancellables: Set<AnyCancellable> = []
   
   init(dataPersistence: DataPersistenceService? = nil, fileManager: FileManagement = DefaultFileManagement()) throws {
     self.dataPersistence = try dataPersistence ?? SwiftDataService()
-    self.fileManager = fileManager
+    self.fileManagement = fileManager
   }
   
   func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
@@ -61,7 +61,7 @@ class AudioRecordsRepository: RecordsRepository {
             }
           } receiveValue: {
             // TODO: Delete the audio file
-            self.fileManager.deleteRecording(at: recording.address)
+            self.fileManagement.deleteRecording(at: recording.address)
             promise(.success(()))
           }
           .store(in: &(self.cancellables))

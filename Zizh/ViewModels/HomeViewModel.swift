@@ -73,7 +73,7 @@ extension ViewModel {
     }
     
     func addRecording(recordingURL: URL) async {
-      guard let (id, timeInterval) = recordsRepository.fileManager.extractRecordingInfo(from: recordingURL) else {
+      guard let (id, timeInterval) = recordsRepository.fileManagement.extractRecordingInfo(from: recordingURL) else {
         print("Recorded file name is not in the correct format")
         return
       }
