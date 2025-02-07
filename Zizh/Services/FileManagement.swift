@@ -75,7 +75,7 @@ class DefaultFileManagement: FileManagement {
   
   private func createDirectories(directories: [URL]) {
     for directory in directories {
-      guard fileManager.fileExists(atPath: directory.path()) else { continue }
+      guard !fileManager.fileExists(atPath: directory.path()) else { continue }
       do {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
       } catch {
