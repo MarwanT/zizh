@@ -10,7 +10,7 @@ import Foundation
 
 class AudioRecordsRepository: RecordsRepository {
   private var dataPersistence: DataPersistenceService
-  private var fileManager: FileManagement
+  private(set) var fileManager: FileManagement
   
   private var cancellables: Set<AnyCancellable> = []
   

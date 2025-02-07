@@ -12,6 +12,7 @@ protocol FileManagement {
   var persistedRecordingsURL: URL { get }
   func generateNewRecordingURL() -> URL
   func deleteRecording(at url: URL)
+  func extractRecordingInfo(from url: URL) -> (id: UUID, timestamp: TimeInterval)?
 }
 
 extension FileManager: FileManagement {
@@ -38,6 +39,15 @@ extension FileManager: FileManagement {
     let id = UUID()
     return self.persistedRecordingsURL.appendingPathComponent(
       "\(id.uuidString)_\(now.timeIntervalSince1970)_.m4a")
+  }
+  
+  func extractRecordingInfo(from url: URL) -> (id: UUID, timestamp: TimeInterval)? {
+    let nameComponents = url.lastPathComponent.components(separatedBy: CharacterSet(charactersIn: "_") )
+    guard let id = UUID(uuidString: nameComponents[0]), let timeInterval = TimeInterval(nameComponents[1]) else {
+      print("Recorded file name is not in the correct format")
+      return nil
+    }
+    return (id: id, timestamp: timeInterval)
   }
   
   func deleteRecording(at url: URL) {

@@ -9,6 +9,7 @@ import Combine
 import Foundation
 
 protocol RecordsRepository {
+  var fileManager: FileManagement { get }
   func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError>
   func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError>
   func fetchRecords() -> AnyPublisher<[Recording], RepositoryError>
