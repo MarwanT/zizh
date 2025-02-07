@@ -14,7 +14,7 @@ class AudioRecordsRepository: RecordsRepository {
   
   private var cancellables: Set<AnyCancellable> = []
   
-  init(dataPersistence: DataPersistenceService? = nil, fileManager: FileManagement = FileManager.default) throws {
+  init(dataPersistence: DataPersistenceService? = nil, fileManager: FileManagement = DefaultFileManagement()) throws {
     self.dataPersistence = try dataPersistence ?? SwiftDataService()
     self.fileManager = fileManager
   }

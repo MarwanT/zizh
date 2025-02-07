@@ -26,7 +26,7 @@ class AudioRecordingService: NSObject, RecordingService {
   private var permissionsService: PermissionsService
   
   init(recorder: AVAudioRecorder? = nil,
-       fileManager: FileManagement = FileManager.default,
+       fileManager: FileManagement = DefaultFileManagement(),
        permissionService: PermissionsService = PermissionsService()) throws {
     self.fileManager = fileManager
     self.recorder = try recorder ?? {
@@ -83,15 +83,10 @@ class AudioRecordingService: NSObject, RecordingService {
   }
   
   private func moveRecordingToDurableLocation() {
-    let temporaryURL = recorder.url
-    let durableFileURL = fileManager.generateNewRecordingURL()
-    do {
-      try FileManager.default.moveItem(at: temporaryURL, to: durableFileURL)
-      recordingFinishedSubject.send(durableFileURL)
-    } catch {
-      // TODO: Handle the error correctly, inform the user
-      print("Error moving audio file: \(error)")
+    guard let durableFileURL = fileManager.moveTemporaryRecordingToPersistedLocation(url: recorder.url) else {
+      return
     }
+    recordingFinishedSubject.send(durableFileURL)
   }
 }
 
