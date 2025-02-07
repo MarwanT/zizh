@@ -28,22 +28,22 @@ final class FileManagementTests {
     try? sut.cleanUp()
   }
   
-  @Test
+  @Test("Directories are created when FileManagement is initialised")
   func directoriesCreation() {
     // directories exist after initialisation
-    #expect(fileManager.fileExists(atPath: sut.homeDirectoryURL.path()))
-    #expect(fileManager.fileExists(atPath: sut.persistedRecordingsDirectoryURL.path()))
-    #expect(fileManager.fileExists(atPath: sut.temporaryRecordingsDirectoryURL.path()))
+    #expect(fileManager.fileExists(atPath: sut.homeDirectoryURL.path()) == false)
+    #expect(fileManager.fileExists(atPath: sut.persistedRecordingsDirectoryURL.path()) == false)
+    #expect(fileManager.fileExists(atPath: sut.temporaryRecordingsDirectoryURL.path()) == false)
   }
   
-  @Test
+  @Test("Generated new recording URL has the correct format")
   func generateValidNewRecordingURL() {
     let recordingURL = sut.generateNewRecordingURL()
     let extractedInfo = sut.extractRecordingInfo(from: recordingURL)
     #expect(extractedInfo != nil)
   }
   
-  @Test
+  @Test("Extract recording info is successful from a valid URL")
   func extractRecordingInfo_ValidFormat() {
     let id = UUID()
     let timestamp = Date().timeIntervalSince1970
@@ -56,18 +56,18 @@ final class FileManagementTests {
     #expect(extractedInfo?.timestamp == timestamp)
   }
   
-  @Test
+  @Test("Extract recording info fails from an invalid URL")
   func extractRecordingInfo_InvalidFormat() {
     let invalidURL = sut.persistedRecordingsDirectoryURL.appendingPathComponent("invalid_format.m4a")
     let extractedInfo = sut.extractRecordingInfo(from: invalidURL)
     #expect(extractedInfo == nil)
   }
   
-  @Test
+  @Test("Delete an existing recording")
   func deleteRecording() {
     let testFileURL = sut.generateNewRecordingURL()
-    fileManager.createFile(atPath: testFileURL.path(), contents: nil, attributes: nil)
-    
+    let creationSuccess = fileManager.createFile(atPath: testFileURL.path(), contents: Data())
+    #expect(creationSuccess == true)
     #expect(fileManager.fileExists(atPath: testFileURL.path()))
     
     sut.deleteRecording(at: testFileURL)
@@ -75,8 +75,8 @@ final class FileManagementTests {
     #expect(!fileManager.fileExists(atPath: testFileURL.path()))
   }
   
-  @Test
-  func moveTemporaryRecordingToPersistedLocation_SuccessfulForExistingFile() {
+  @Test("Move existing temporary recording to persisted location")
+  func moveTemporaryRecordingToPersistedLocation_ExistingFile() {
     // given
     let success = fileManager.createFile(atPath: sut.temporaryRecordingURL.path(), contents: Data())
     #expect(success == true)
@@ -86,15 +86,15 @@ final class FileManagementTests {
     #expect(newAddress != nil)
   }
   
-  @Test
-  func moveTemporaryRecordingToPersistedLocation_FailForNonExistingFile() {
+  @Test("Fail to move a non existing recording to persisted location")
+  func moveTemporaryRecordingToPersistedLocation_FileDoesNotExist() {
     // when
     let newAddress = sut.moveTemporaryRecordingToPersistedLocation(url: sut.temporaryRecordingURL)
     // then
     #expect(newAddress == nil)
   }
   
-  @Test
+  @Test("Removes all content of the Home directory")
   func cleanUpRemovesAllDirectoriesAndFiles() {
     #expect(!fileManager.fileExists(atPath: sut.homeDirectoryURL.path()))
   }
