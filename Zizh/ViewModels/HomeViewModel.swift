@@ -130,14 +130,15 @@ extension ViewModel {
         audioPlayer.stop()
         self.audioPlayer = nil
       } else {
-        guard FileManager.default.fileExists(atPath: url.path) else {
+        let absoluteURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(url.path())
+        guard FileManager.default.fileExists(atPath: absoluteURL.path()) else {
           self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio file does not exist!")
           return
         }
         do {
           // Configure audio session to route audio to the speaker
           configureAudioSession()
-          audioPlayer = try AVAudioPlayer(contentsOf: url)
+          audioPlayer = try AVAudioPlayer(contentsOf: absoluteURL)
           audioPlayer!.delegate = self
           audioPlayer!.prepareToPlay()
           audioPlayer!.play()

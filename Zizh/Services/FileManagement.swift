@@ -16,6 +16,13 @@ protocol FileManagement {
   func extractRecordingInfo(from url: URL) -> (id: UUID, timestamp: TimeInterval)?
   func generateNewRecordingURL() -> URL
   func moveTemporaryRecordingToPersistedLocation(url: URL) -> URL?
+  func isRelativeURL(_ url: URL) -> Bool
+  func makeRelativeURL(_ url: URL) throws -> URL
+}
+
+enum FileManagementError: Error {
+  case urlFormatUnrecgonized
+  case invalidFileURL
 }
 
 class DefaultFileManagement: FileManagement {
@@ -73,11 +80,27 @@ class DefaultFileManagement: FileManagement {
     }
   }
   
+  func isRelativeURL(_ url: URL) -> Bool {
+    let containsTheDocumentPath = url.pathComponents.contains(where: { $0 == "Documents"})
+    return !containsTheDocumentPath
+  }
+  
+  func makeRelativeURL(_ url: URL) throws -> URL {
+    guard !isRelativeURL(url),
+          let indexOfDocumentsPath = url.pathComponents.firstIndex(of: "Documents") else { return url }
+    let relativePathComponents = url.pathComponents[(indexOfDocumentsPath + 1)...]
+    guard let relativeURL = URL(string: relativePathComponents.joined(separator: "/")) else {
+      throw FileManagementError.invalidFileURL
+    }
+    return relativeURL
+  }
+  
   private func createDirectories(directories: [URL]) {
     for directory in directories {
       guard !fileManager.fileExists(atPath: directory.path()) else { continue }
       do {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        print("Directory '\(directory.lastPathComponent)' created successfully.")
       } catch {
         print("Error creating directory '\(directory.lastPathComponent)': \(error)")
       }

@@ -47,6 +47,7 @@ final class AudioRecordsRepositoryTests {
     #expect(persistedRecordingData != [])
     #expect(persistedRecordingData?.count == 1)
     #expect(persistedRecordingData?[0] == recording)
+    #expect(mockFileManagment.isRelativeURL(persistedRecordingData![0].address) == true)
   }
   
   @Test("Delets an existing recording")
@@ -98,6 +99,7 @@ final class AudioRecordsRepositoryTests {
       #expect(recordings.contains(where: { $0.id == persistedRecording.id }))
       let fileExists = fileManager.fileExists(atPath: persistedRecording.address.path())
       #expect(fileExists == true)
+      #expect(mockFileManagment.isRelativeURL(persistedRecording.address) == true)
     }
   }
   
@@ -105,13 +107,13 @@ final class AudioRecordsRepositoryTests {
   func fetchAllRemainingRecords() async throws {
     // given
     var recordings: [Recording] = []
-    for var i in 0..<5 {
+    for _ in 0..<5 {
       let recordingURL = mockFileManagment.generateNewRecordingURL()
       let (id, timeInterval) = mockFileManagment.extractRecordingInfo(from: recordingURL)!
       let recording = Recording(id: id, duration: timeInterval, name: Date(timeIntervalSince1970: timeInterval).ISO8601Format(), address: recordingURL)
       let created = fileManager.createFile(atPath: recordingURL.path(), contents: Data())
       #expect(created == true)
-      await dataPersistenceService.add(item: recording)
+      try await dataPersistenceService.add(item: recording).values.first()
       recordings.append(recording)
     }
     
@@ -129,6 +131,7 @@ final class AudioRecordsRepositoryTests {
       #expect(!deletedRecordings.contains(where: { $0.id == persistedRecording.id }))
       let fileExists = fileManager.fileExists(atPath: persistedRecording.address.path())
       #expect(fileExists == true)
+      #expect(mockFileManagment.isRelativeURL(persistedRecording.address) == true)
     }
   }
 }

@@ -25,6 +25,7 @@ class AudioRecordsRepository: RecordsRepository {
         promise(.failure(.repositoryDeallocated))
         return
       }
+      makeAddressRelativeIfNeeded(recording)
       Task { @MainActor in
         self.dataPersistence.add(item: recording)
           .receive(on: DispatchQueue.main)
@@ -95,5 +96,15 @@ class AudioRecordsRepository: RecordsRepository {
     }.eraseToAnyPublisher()
   }
   
-  
+  private func makeAddressRelativeIfNeeded(_ recording: Recording) {
+    guard !fileManagement.isRelativeURL(recording.address) else {
+      return
+    }
+    do {
+      let relativeURL = try fileManagement.makeRelativeURL(recording.address)
+      recording.address = relativeURL
+    } catch {
+      print("Fail to make address relative: \(error)")
+    }
+  }
 }

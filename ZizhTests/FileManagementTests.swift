@@ -100,4 +100,61 @@ final class FileManagementTests {
     try sut.cleanUp()
     #expect(fileManager.fileExists(atPath: sut.homeDirectoryURL.path()) == false)
   }
+  
+  @Test("Recognizes an absolute url")
+  func recognizeAbsoluteURL() {
+    let url = sut.generateNewRecordingURL()
+    let isRelative = sut.isRelativeURL(url)
+    #expect(isRelative == false)
+  }
+  
+  @Test("Recorgnizes a relative url")
+  func recognizeRelativeURL() {
+    let absoluteURL = sut.generateNewRecordingURL()
+    let components = absoluteURL.pathComponents
+    let indexOfDocumentsPath = components.firstIndex(of: "Documents")
+    #expect(indexOfDocumentsPath != nil)
+    let relativePathComponents = components[(indexOfDocumentsPath! + 1)...]
+    let url = URL(string: relativePathComponents.joined(separator: "/"))
+    #expect(url != nil)
+    let isRelative = sut.isRelativeURL(url!)
+    #expect(isRelative == true)
+  }
+  
+  @Test("Converts an absolute URL within Documents to a relative URL")
+  func makeRelativeURLFromAbsolute() throws {
+    // Given
+    let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    let absoluteURL = documentsDirectory.appendingPathComponent("Recordings/recording1.m4a")
+    
+    // When
+    let relativeURL = try sut.makeRelativeURL(absoluteURL)
+    
+    // Then
+    #expect(relativeURL.path == "Recordings/recording1.m4a")
+  }
+  
+  @Test("Returns the same URL when given a relative URL")
+  func makeRelativeURLFromRelative() throws {
+    // Given
+    let relativeURL = URL(fileURLWithPath: "Recordings/recording1.m4a")
+    
+    // When
+    let resultURL = try sut.makeRelativeURL(relativeURL)
+    
+    // Then
+    #expect(resultURL == relativeURL)
+  }
+  
+  @Test("Returns the same URL when given a URL outside Documents directory")
+  func testMakeRelativeURLOutsideDocuments() throws {
+    // Given
+    let externalURL = URL(fileURLWithPath: "/tmp/recording1.m4a")
+    
+    // When
+    let resultURL = try sut.makeRelativeURL(externalURL)
+    
+    // Then
+    #expect(resultURL == externalURL)
+  }
 }
