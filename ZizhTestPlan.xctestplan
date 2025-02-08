@@ -1,0 +1,32 @@
+{
+  "configurations" : [
+    {
+      "id" : "F774C8FD-DDAB-4ACF-9ED5-40CA365E0FA9",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Zizh.xcodeproj",
+        "identifier" : "9C3814612D4A5D6900684022",
+        "name" : "ZizhTests"
+      }
+    },
+    {
+      "enabled" : false,
+      "target" : {
+        "containerPath" : "container:Zizh.xcodeproj",
+        "identifier" : "9C38146B2D4A5D6900684022",
+        "name" : "ZizhUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
