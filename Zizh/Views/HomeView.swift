@@ -16,24 +16,11 @@ struct HomeView: View {
       VStack {
         List {
           ForEach(viewModel.recordings, id: \.id) { recording in
-            HStack {
-              VStack(alignment: .leading) {
-                Text("\(recording.name)")
-                  .font(.headline)
-                Text("\(recording.duration, specifier: "%.2f") sec")
-                  .font(.subheadline)
-                  .foregroundColor(Color.gray)
+            RecordingRow(recording: recording)
+              .contentShape(Rectangle())  // Ensures the whole row is tappable
+              .onTapGesture {
+                viewModel.handleRecordingTap(recording)
               }
-              Spacer()
-              Text(recording.createdAt, style: .date)
-                .font(.caption)
-                .foregroundColor(.gray)
-            }
-            .padding(.vertical, 5)
-            .contentShape(Rectangle())  // Ensures the whole row is tappable
-            .onTapGesture {
-              // TODO: Handle the taping geture here
-            }
           }
           .onDelete(perform: viewModel.deleteRecording)
         }
@@ -55,6 +42,9 @@ struct HomeView: View {
     }
     .alert(item: $viewModel.deletionErrorMessage) { errorMessage in
       Alert(title: Text("Error"), message: Text(errorMessage.message), dismissButton: .default(Text("OK")))
+    }
+    .alert(item: $viewModel.audioPlayerAlertMessage) { warning in
+      Alert(title: Text("Audio Player Message"), message: Text(warning.message), dismissButton: .default(Text("OK")))
     }
   }
 }

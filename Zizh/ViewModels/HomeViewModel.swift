@@ -5,23 +5,27 @@
 //  Created by Marwan Tutunji on 29/01/2025.
 //
 
+import AVFoundation
 import Foundation
 import Combine
 
 extension ViewModel {
-  class Home: ObservableObject {
+  class Home: NSObject, ObservableObject {
     @Published private(set) var isRecording: Bool = false
     @Published private(set) var recordings: [Recording] = []
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
+    @Published var audioPlayerAlertMessage: IdentifiableMessages? = nil
     
     private var recordingService: RecordingService!
     private var recordsRepository: any RecordsRepository
     private var cancellables: Set<AnyCancellable> = []
+    private var audioPlayer: AVAudioPlayer?
     
     init (recordingService: RecordingService? = nil, recordsRepository: (any RecordsRepository)? = nil) {
       do {
         self.recordsRepository = try recordsRepository ?? AudioRecordsRepository()
         self.recordingService = try recordingService ?? AudioRecordingService()
+        super.init()
         
         // Observe isRecording changes
         self.recordingService.isRecordingPublisher
@@ -116,5 +120,62 @@ extension ViewModel {
           .store(in: &cancellables)
       }
     }
+    
+    func handleRecordingTap(_ recording: Recording) {
+      playPauseRecording(at: recording.address)
+    }
+    
+    private func playPauseRecording(at url: URL) {
+      if let audioPlayer = audioPlayer {
+        audioPlayer.stop()
+        self.audioPlayer = nil
+      } else {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+          self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio file does not exist!")
+          return
+        }
+        do {
+          // Configure audio session to route audio to the speaker
+          configureAudioSession()
+          audioPlayer = try AVAudioPlayer(contentsOf: url)
+          audioPlayer!.delegate = self
+          audioPlayer!.prepareToPlay()
+          audioPlayer!.play()
+        } catch {
+          print("Error playing recording: \(error.localizedDescription)")
+        }
+      }
+    }
+    
+    private func configureAudioSession() {
+      let audioSession = AVAudioSession.sharedInstance()
+      do {
+        // Set the audio session category to play and record, and default to speaker
+        try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker])
+        // Activate the audio session
+        try audioSession.setActive(true)
+      } catch {
+        print("Failed to set up audio session: \(error.localizedDescription)")
+      }
+    }
+  }
+}
+
+extension ViewModel.Home: AVAudioPlayerDelegate {
+  func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+    self.audioPlayer = nil
+  }
+
+  func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: (any Error)?) {
+    self.audioPlayer = nil
+    self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio player audio decoding error occurred")
+  }
+
+  func audioPlayerBeginInterruption(_ player: AVAudioPlayer) {
+    print("Audio player was Interrupted")
+  }
+
+  func audioPlayerEndInterruption(_ player: AVAudioPlayer, withOptions flags: Int) {
+    print("Audio player interruption ended")
   }
 }
