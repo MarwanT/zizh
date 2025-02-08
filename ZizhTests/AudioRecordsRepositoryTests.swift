@@ -9,8 +9,9 @@ import Foundation
 import Testing
 @testable import Zizh
 
+@Suite(.serialized)
 final class AudioRecordsRepositoryTests {
-  let sut: RecordsRepository!
+  var sut: RecordsRepository!
   let mockFileManagment: DefaultFileManagement!
   let fileManager: FileManager!
   let dataPersistenceService: DataPersistenceService!
@@ -24,6 +25,7 @@ final class AudioRecordsRepositoryTests {
   
   deinit {
     try? mockFileManagment.cleanUp()
+    sut = nil
   }
   
   @Test("Adds a new recording")
@@ -75,10 +77,14 @@ final class AudioRecordsRepositoryTests {
     for _ in 0..<5 {
       let recordingURL = mockFileManagment.generateNewRecordingURL()
       let (id, timeInterval) = mockFileManagment.extractRecordingInfo(from: recordingURL)!
-      let recording = Recording(id: id, duration: timeInterval, name: Date(timeIntervalSince1970: timeInterval).ISO8601Format(), address: recordingURL)
+      let recording = Recording(
+        id: id,
+        duration: timeInterval,
+        name: Date(timeIntervalSince1970: timeInterval).ISO8601Format(),
+        address: recordingURL)
       let created = fileManager.createFile(atPath: recordingURL.path(), contents: Data())
       #expect(created == true)
-      await dataPersistenceService.add(item: recording)
+      try await dataPersistenceService.add(item: recording).values.first()
       recordings.append(recording)
     }
     

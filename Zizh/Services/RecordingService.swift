@@ -22,16 +22,16 @@ class AudioRecordingService: NSObject, RecordingService {
   @Published private(set) var isRecording: Bool = false
   private var recordingFinishedSubject: PassthroughSubject<URL, Never> = .init()
   private var recorder: AVAudioRecorder
-  private var fileManager: FileManagement
+  private var fileManagement: FileManagement
   private var permissionsService: PermissionsService
   
   init(recorder: AVAudioRecorder? = nil,
-       fileManager: FileManagement = DefaultFileManagement(),
+       fileManagement: FileManagement = DefaultFileManagement(),
        permissionService: PermissionsService = PermissionsService()) throws {
-    self.fileManager = fileManager
+    self.fileManagement = fileManagement
     self.recorder = try recorder ?? {
       let generatedRecorder = try AVAudioRecorder(
-        url: fileManager.temporaryRecordingURL,
+        url: fileManagement.temporaryRecordingURL,
         settings: [
           AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
           AVSampleRateKey: 44100.0,
@@ -83,7 +83,7 @@ class AudioRecordingService: NSObject, RecordingService {
   }
   
   private func moveRecordingToDurableLocation() {
-    guard let durableFileURL = fileManager.moveTemporaryRecordingToPersistedLocation(url: recorder.url) else {
+    guard let durableFileURL = fileManagement.moveTemporaryRecordingToPersistedLocation(url: recorder.url) else {
       return
     }
     recordingFinishedSubject.send(durableFileURL)

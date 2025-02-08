@@ -10,60 +10,116 @@ import Foundation
 import Testing
 @testable import Zizh
 
-
-
+@Suite(.serialized)
 final class HomeViewModelTests {
+  var sut: ViewModel.Home!
   let mockRecordsRepository: MockRecordRepository
   let mockRecordingService: MockRecordingService
-  let sut: ViewModel.Home
+  let fileManagement: FileManagement
   var cancellables: Set<AnyCancellable> = []
   
   init() {
+    fileManagement = MockFileManagement()
+    mockRecordingService = MockRecordingService()
     mockRecordsRepository = MockRecordRepository()
-    mockRecordingService = MockRecordingService(recordsRepository: mockRecordsRepository)
     sut = ViewModel.Home(recordingService: mockRecordingService, recordsRepository: mockRecordsRepository)
   }
   
-  @Test
-  func toggleRecordingStartsAndStopsRecording() async throws {
-    // given
-    var values: [Bool] = []
-    #expect(sut.isRecording == false)
-    // when => then
-    sut.toggleRecording()
-    try await Task.sleep(nanoseconds: 500_000_000)
-    for await value in sut.$isRecording.values.prefix(1) {
-      values.append(value)
-    }
-    sut.toggleRecording()
-    try await Task.sleep(nanoseconds: 500_000_000)
-    for await value in sut.$isRecording.values.prefix(1) {
-      values.append(value)
-    }
-    #expect(values == [true, false])
+  deinit {
+    sut = nil
   }
   
-  @Test
+  @Test("Starts recording when toggled the first time")
+  func startsRecordingWhenToggledTheFirstTime() async throws {
+    // given
+    #expect(sut.isRecording == false)
+    
+    // when
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(500))
+    
+    // then
+    let isRecording = await sut.$isRecording.values.first()
+    #expect(isRecording == true)
+  }
+  
+  @Test("Stops recording when toggled twice")
+  func stopsRecordingWhenToggledTwice() async throws {
+    // given
+    #expect(sut.isRecording == false)
+    
+    // when
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(500))
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(500))
+    
+    // then
+    let isRecording = await sut.$isRecording.values.first()
+    #expect(isRecording == false)
+  }
+  
+  @Test("Adds a recording when recording finishes")
+  func addsARecordingWhenRecordingFinishes() async throws {
+    // given
+    #expect(sut.isRecording == false)
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(200))
+    
+    // when
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(200))
+    
+    // then
+    let recordings = try await mockRecordsRepository.fetchRecords().values.first()
+    #expect(recordings?.count == 1)
+  }
+  
+  @Test("Adds two recordings when recording finishes")
+  func addsTwoRecordingsWhenRecordingFinishesTwice() async throws {
+    // given
+    #expect(sut.isRecording == false)
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(200))
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(200))
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(200))
+    
+    // when
+    sut.toggleRecording()
+    try await Task.sleep(for: .milliseconds(200))
+    
+    // then
+    let recordings = try await mockRecordsRepository.fetchRecords().values.first()
+    #expect(recordings?.count == 2)
+  }
+  
+  @Test("Fetches recordings from the repository with 10 recordings")
   func fetchRecordingsFromRepository_ManyRecordings() async throws {
     // given
     mockRecordsRepository.persistedRecords = MockData.recordings(count: 10) 
+    
     // when
     sut.syncRecordings()
-    let results = await sut.$recordings.values.first()!.map { $0 }
-    try await Task.sleep(nanoseconds: 500_000_000)
+    try await Task.sleep(for: .milliseconds(200))
+    
     // then
+    let results = await sut.$recordings.values.first()
     #expect(mockRecordsRepository.persistedRecords == results)
   }
   
-  @Test
+  @Test("Fetches recordings from the repository with 0 recordings")
   func fetchRecordingsFromRepository_NoRecordings() async throws {
     // given
     mockRecordsRepository.persistedRecords = MockData.recordings(count: 0) 
+    
     // when
     sut.syncRecordings()
-    let results = await sut.$recordings.values.first()!.map { $0 }
-    try await Task.sleep(nanoseconds: 500_000_000)
+    try await Task.sleep(for: .milliseconds(200))
+    
     // then
+    let results = await sut.$recordings.values.first()!.map { $0 }
     #expect(mockRecordsRepository.persistedRecords == results)
   }
   
@@ -74,9 +130,11 @@ final class HomeViewModelTests {
     let deletedRecordingIndex = 1
     let deletedRecording = mockRecordsRepository.persistedRecords[deletedRecordingIndex]
     sut.syncRecordings()
-    try await Task.sleep(nanoseconds: 500_000_000)
+    try await Task.sleep(for: .milliseconds(200))
+    
     // when
     sut.deleteRecording(at: IndexSet([deletedRecordingIndex]))
+    
     // then
     #expect(mockRecordsRepository.persistedRecords.count == 10)
     #expect(!mockRecordsRepository.persistedRecords.contains(deletedRecording))

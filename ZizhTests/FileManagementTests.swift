@@ -15,6 +15,7 @@ extension DefaultFileManagement {
   }
 }
 
+@Suite(.serialized)
 final class FileManagementTests {
   let fileManager: FileManager
   let sut: DefaultFileManagement
@@ -31,9 +32,9 @@ final class FileManagementTests {
   @Test("Directories are created when FileManagement is initialised")
   func directoriesCreation() {
     // directories exist after initialisation
-    #expect(fileManager.fileExists(atPath: sut.homeDirectoryURL.path()) == false)
-    #expect(fileManager.fileExists(atPath: sut.persistedRecordingsDirectoryURL.path()) == false)
-    #expect(fileManager.fileExists(atPath: sut.temporaryRecordingsDirectoryURL.path()) == false)
+    #expect(fileManager.fileExists(atPath: sut.homeDirectoryURL.path()) == true)
+    #expect(fileManager.fileExists(atPath: sut.persistedRecordingsDirectoryURL.path()) == true)
+    #expect(fileManager.fileExists(atPath: sut.temporaryRecordingsDirectoryURL.path()) == true)
   }
   
   @Test("Generated new recording URL has the correct format")
@@ -95,7 +96,8 @@ final class FileManagementTests {
   }
   
   @Test("Removes all content of the Home directory")
-  func cleanUpRemovesAllDirectoriesAndFiles() {
-    #expect(!fileManager.fileExists(atPath: sut.homeDirectoryURL.path()))
+  func cleanUpRemovesAllDirectoriesAndFiles() throws {
+    try sut.cleanUp()
+    #expect(fileManager.fileExists(atPath: sut.homeDirectoryURL.path()) == false)
   }
 }

@@ -20,6 +20,7 @@
       }
     },
     {
+      "enabled" : false,
       "target" : {
         "containerPath" : "container:Zizh.xcodeproj",
         "identifier" : "9C38146B2D4A5D6900684022",

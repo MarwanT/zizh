@@ -10,6 +10,9 @@ import Foundation
 @testable import Zizh
 
 class MockRecordingService: RecordingService {
+  private var fileManagement: FileManagement
+  private var fileManager: FileManager
+  
   @Published private(set) var isRecording: Bool = false
   var isRecordingPublisher: AnyPublisher<Bool, Never> {
     $isRecording.eraseToAnyPublisher()
@@ -20,8 +23,10 @@ class MockRecordingService: RecordingService {
     return $recordingFinishedURL.eraseToAnyPublisher()
   }
   
-  init() {
-    recordingFinishedURL = FileManager.default.temporaryDirectory
+  init(fileManagement: FileManagement = DefaultFileManagement(), fileManager: FileManager = .default) {
+    self.fileManagement = fileManagement
+    self.fileManager = fileManager
+    recordingFinishedURL = self.fileManager.temporaryDirectory
   }
   
   func startRecording() {
@@ -30,7 +35,7 @@ class MockRecordingService: RecordingService {
   
   func stopRecording() {
     isRecording = false
-    recordingFinishedURL = FileManager.default.temporaryDirectory
+    recordingFinishedURL = self.fileManagement.generateNewRecordingURL()
   }
   
   func requestPermission() -> AnyPublisher<Bool, Never> {
