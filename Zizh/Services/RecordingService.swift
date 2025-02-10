@@ -57,7 +57,7 @@ class AudioRecordingService: NSObject, RecordingService {
   
   func startRecording() {
     do {
-      try audioSession.setCategory(.playAndRecord)
+      try audioSession.setCategory(.playAndRecord, mode: .default)
       try audioSession.setActive(true, options: [])
       
       isRecording = true

@@ -12,14 +12,22 @@ import Combine
 extension ViewModel {
   class Home: NSObject, ObservableObject {
     @Published private(set) var isRecording: Bool = false
-    @Published private(set) var recordings: [Recording] = []
+    @Published private(set) var isSlowMotion: Bool = false
+    @Published private(set) var isPlaying: Bool = false
+    
+    @Published var recordings: [Recording] = []
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
     @Published var audioPlayerAlertMessage: IdentifiableMessages? = nil
     
     private var recordingService: RecordingService!
     private var recordsRepository: any RecordsRepository
     private var cancellables: Set<AnyCancellable> = []
+    
     private var audioPlayer: AVAudioPlayer?
+    private var audioEngine: AVAudioEngine?
+    private var audioPlayerNode: AVAudioPlayerNode?
+    
+    private var rate: Float = 1/8.0
     
     init (recordingService: RecordingService? = nil, recordsRepository: (any RecordsRepository)? = nil) {
       do {
@@ -76,6 +84,11 @@ extension ViewModel {
       }
     }
     
+    func toggleSlowMotionOn() {
+      isSlowMotion = !isSlowMotion
+      stopPlayingRecording()
+    }
+    
     func addRecording(recordingURL: URL) async {
       guard let (id, timeInterval) = recordsRepository.fileManagement.extractRecordingInfo(from: recordingURL) else {
         print("Recorded file name is not in the correct format")
@@ -122,30 +135,104 @@ extension ViewModel {
     }
     
     func handleRecordingTap(_ recording: Recording) {
-      playPauseRecording(at: recording.address)
+      togglePlayPause(at: recording.address)
     }
     
-    private func playPauseRecording(at url: URL) {
-      if let audioPlayer = audioPlayer {
-        audioPlayer.stop()
-        self.audioPlayer = nil
-      } else {
-        let absoluteURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(url.path())
-        guard FileManager.default.fileExists(atPath: absoluteURL.path()) else {
-          self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio file does not exist!")
-          return
-        }
-        do {
-          // Configure audio session to route audio to the speaker
-          configureAudioSession()
-          audioPlayer = try AVAudioPlayer(contentsOf: absoluteURL)
-          audioPlayer!.delegate = self
-          audioPlayer!.prepareToPlay()
-          audioPlayer!.play()
-        } catch {
-          print("Error playing recording: \(error.localizedDescription)")
-        }
+    private func togglePlayPause(at url: URL) {
+      isPlaying ? stopPlayingRecording() : playRecording(at: url)
+    }
+    
+    private func playRecording(at url: URL) {
+      stopPlayingRecording()
+      
+      let absoluteURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(url.path())
+      guard FileManager.default.fileExists(atPath: absoluteURL.path()) else {
+        self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio file does not exist!")
+        return
       }
+      
+      configureAudioSession()
+      if isSlowMotion {
+        playRecordingInSlowMotion(at: absoluteURL)
+      } else {
+        playRecordingNormally(at: absoluteURL)
+      }
+    }
+    
+    private func playRecordingNormally(at url: URL) {
+      do {
+        audioPlayer = try AVAudioPlayer(contentsOf: url)
+        audioPlayer!.delegate = self
+        audioPlayer!.prepareToPlay()
+        audioPlayer!.play()
+      } catch {
+        print("Error playing recording: \(error.localizedDescription)")
+      }
+    }
+    
+    private func playRecordingInSlowMotion(at url: URL) {
+      audioEngine = AVAudioEngine()
+      audioPlayerNode = AVAudioPlayerNode()
+      guard let audioEngine = audioEngine, let audioPlayerNode = audioPlayerNode else { return }
+      
+      let timePitch = AVAudioUnitTimePitch()
+      timePitch.rate = rate // 4x slowdown
+      timePitch.pitch = log2(rate) * 1200 // Adjust pitch to avoid robotic sound
+      print("Rate: \(rate) ; Pitch: \(timePitch.pitch)")
+      
+      // Attach all nodes first
+      audioEngine.attach(audioPlayerNode)
+      audioEngine.attach(timePitch)
+      
+      // Connect nodes in sequence
+      audioEngine.connect(audioPlayerNode, to: timePitch, format: nil)
+      audioEngine.connect(timePitch, to: audioEngine.mainMixerNode, format: nil)
+      
+      
+      guard let audioFile = try? AVAudioFile(forReading: url) else {
+        print("Failed to load audio file.")
+        return
+      }
+      
+      // Start engine first
+      do {
+        try audioEngine.start()
+        
+        // Schedule audio after engine is running
+        audioPlayerNode.scheduleFile(audioFile, at: nil) { [weak self] in
+          self?.audioEngine?.stop()
+        }
+        
+        // Add minimal hardware sync delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+          audioPlayerNode.play()
+        }
+      } catch {
+        print("Engine start failed: \(error)")
+      }
+    }
+    
+    private func stopPlayingRecording() {
+      stopRecordingPlayingNormally()
+      stopRecordingPlayingInSlowMotion()
+    }
+    
+    private func stopRecordingPlayingNormally() {
+      guard let audioPlayer = audioPlayer else {
+        return
+      }
+      audioPlayer.stop()
+      self.audioPlayer = nil
+    }
+    
+    private func stopRecordingPlayingInSlowMotion() {
+      guard audioEngine != nil, audioPlayerNode != nil else {
+        return
+      }
+      audioPlayerNode?.stop()
+      try? audioEngine?.stop()
+      audioEngine = nil
+      audioPlayerNode = nil
     }
     
     private func configureAudioSession() {
