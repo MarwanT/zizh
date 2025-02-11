@@ -15,6 +15,7 @@ struct RecordingRow: View {
       VStack(alignment: .leading) {
         Text(recording.name)
           .font(.headline)
+          .foregroundColor(Color.white)
         Text("\(recording.duration, specifier: "%.2f") sec")
           .font(.subheadline)
           .foregroundColor(Color.gray)

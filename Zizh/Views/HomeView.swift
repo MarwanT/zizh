@@ -8,6 +8,9 @@
 import SwiftUI
 
 struct HomeView: View {
+  @State private var isEditing = false
+  @State private var editedText: String = ""
+  @State private var isShowingAlert = false
   @StateObject private var viewModel: ViewModel.Home
   
   init(viewModel: ViewModel.Home = ViewModel.Home()) {
@@ -25,11 +28,22 @@ struct HomeView: View {
                 .contentShape(Rectangle())  // Ensures the whole row is tappable
                 .onTapGesture {
                   viewModel.handleRecordingTap(recording)
-                }
+                }.listRowBackground(Color.white.opacity(0.1))
             }
             .onDelete(perform: viewModel.deleteRecording)
           }
+          .scrollContentBackground(.hidden) // Hides the default List background
+          .background(Color.black)
           .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+              Button(action: {
+                editedText = "\(viewModel.rate)"
+                isShowingAlert = true
+              }) {
+                Text("\(viewModel.rate, specifier: "%.4f")")
+              }
+            }
+            
             ToolbarItem(placement: .navigationBarTrailing) {
               Button(action: {
                 viewModel.toggleSlowMotionOn()
@@ -64,6 +78,17 @@ struct HomeView: View {
       .alert(item: $viewModel.audioPlayerAlertMessage) { warning in
         Alert(title: Text("Audio Player Message"), message: Text(warning.message), dismissButton: .default(Text("OK")))
       }
+      .alert("Edit Value", isPresented: $isShowingAlert) {
+        TextField("Enter new value", text: $editedText) // Editable text field
+        Button("Cancel", role: .cancel) { }
+        Button("Done") {
+            if let newRate = Float(editedText) {
+                viewModel.rate = newRate
+            }
+        }
+    } message: {
+        Text("Enter a new value:")
+    }
     }
   }
 }

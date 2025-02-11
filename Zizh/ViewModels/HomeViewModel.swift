@@ -19,6 +19,8 @@ extension ViewModel {
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
     @Published var audioPlayerAlertMessage: IdentifiableMessages? = nil
     
+    @Published var rate: Float = 1/8.0
+    
     private var recordingService: RecordingService!
     private var recordsRepository: any RecordsRepository
     private var cancellables: Set<AnyCancellable> = []
@@ -26,8 +28,6 @@ extension ViewModel {
     private var audioPlayer: AVAudioPlayer?
     private var audioEngine: AVAudioEngine?
     private var audioPlayerNode: AVAudioPlayerNode?
-    
-    private var rate: Float = 1/8.0
     
     init (recordingService: RecordingService? = nil, recordsRepository: (any RecordsRepository)? = nil) {
       do {
