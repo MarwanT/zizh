@@ -267,3 +267,26 @@ extension ViewModel.Home: AVAudioPlayerDelegate {
     print("Audio player interruption ended")
   }
 }
+
+extension ViewModel.Home {
+  class ViewModelHomePreview: ViewModel.Home {
+    override func syncRecordings() {
+      self.recordings = [
+        Recording(duration: 10, name: "Sample Recording", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording2", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording3", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording4", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording5", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording6", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording7", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording8", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        Recording(duration: 10, name: "Sample Recording9", address: URL(fileURLWithPath: "/zouzou/marwan")),
+      ]
+    }
+  }
+  
+  static let preview: ViewModel.Home = {
+    let viewModel = ViewModelHomePreview()
+    return viewModel as ViewModel.Home
+  }()
+}

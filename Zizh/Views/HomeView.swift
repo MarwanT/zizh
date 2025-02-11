@@ -8,7 +8,11 @@
 import SwiftUI
 
 struct HomeView: View {
-  @StateObject private var viewModel: ViewModel.Home = ViewModel.Home()
+  @StateObject private var viewModel: ViewModel.Home
+  
+  init(viewModel: ViewModel.Home = ViewModel.Home()) {
+    _viewModel = StateObject(wrappedValue: viewModel)
+  }
   
   var body: some View {
     NavigationStack {
@@ -65,5 +69,5 @@ struct HomeView: View {
 }
 
 #Preview {
-  HomeView()
+  HomeView(viewModel: ViewModel.Home.preview)
 }
