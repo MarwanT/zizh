@@ -22,8 +22,8 @@ enum PlayMode {
 }
 
 enum MediaPlayerStatus {
-  case playing
-  case paused
+  case playing(_ url: URL)
+  case paused(_ url: URL)
   case stopped
 }
 
@@ -59,7 +59,6 @@ class AudioPlayerService: NSObject, MediaPlayerService {
   }
   
   func play(_ url: URL, mode: PlayMode = .normal) -> Result<Bool, MediaPlayerError> {
-    stop()
     guard validateURL(url) else {
       return .failure(.invalidMediaAddress)
     }
@@ -72,7 +71,7 @@ class AudioPlayerService: NSObject, MediaPlayerService {
       case .slowMotion(let rate):
         try playSlowMotion(url, for: rate)
       }
-      currentStatus = .playing
+      currentStatus = .playing(url)
       return .success(true)
     } catch {
       return .failure(.playbackFailed)
@@ -187,12 +186,18 @@ extension AudioPlayerService: AVAudioPlayerDelegate {
   }
 
   func audioPlayerBeginInterruption(_ player: AVAudioPlayer) {
-    self.currentStatus = .paused
+    guard case let .playing(url) = self.currentStatus else {
+      exit(0)
+    }
+    self.currentStatus = .paused(url)
     print("Audio player was Interrupted")
   }
 
   func audioPlayerEndInterruption(_ player: AVAudioPlayer, withOptions flags: Int) {
-    self.currentStatus = .playing
+    guard case let .paused(url) = self.currentStatus else {
+      exit(0)
+    }
+    self.currentStatus = .playing(url)
     print("Audio player interruption ended")
   }
 }

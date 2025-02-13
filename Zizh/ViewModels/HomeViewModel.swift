@@ -13,7 +13,7 @@ extension ViewModel {
   class Home: NSObject, ObservableObject {
     @Published private(set) var isRecording: Bool = false
     @Published private(set) var isSlowMotion: Bool = false
-    @Published private(set) var isPlaying: Bool = false
+    @Published private(set) var currentPlayingId: UUID? = nil
     
     @Published var recordings: [Recording] = []
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
@@ -145,19 +145,18 @@ extension ViewModel {
     }
     
     func handleRecordingTap(_ recording: Recording) {
-      togglePlayPause(at: recording.address)
+      togglePlayPause(recording)
     }
     
-    private func togglePlayPause(at url: URL) {
-      isPlaying ? stopPlayingRecording() : playRecording(at: url)
+    private func togglePlayPause(_ recording: Recording) {
+      currentPlayingId != nil ? stopPlayingRecording() : playRecording(recording)
     }
     
-    private func playRecording(at url: URL) {
-      let absoluteURL = recordsRepository.fileManagement.makeAbsoluteURL(url)
+    private func playRecording(_ recording: Recording) {
+      let absoluteURL = recordsRepository.fileManagement.makeAbsoluteURL(recording.address)
       let result = isSlowMotion ? mediaPlayer.play(absoluteURL, mode: .slowMotion(rate)) : mediaPlayer.play(absoluteURL)
       switch result {
-      case .success(let success):
-        isPlaying = true
+      case .success(_):
         break
       case .failure(let error):
         print("Failed to play recording: \(error)")
@@ -172,11 +171,18 @@ extension ViewModel {
       // Media Player Status Changed
       print("Media Player Status Changed: \(status)")
       switch status {
-      case .paused, .stopped:
-        isPlaying = false
-      default:
-        break
+      case let .playing(url):
+        currentPlayingId = recordingFromURL(url)?.id
+      case let .paused(url):
+        currentPlayingId = recordingFromURL(url)?.id
+      case .stopped:
+        currentPlayingId = nil
       }
+    }
+    
+    private func recordingFromURL(_ url: URL) -> Recording? {
+      let relativeURL = try? recordsRepository.fileManagement.makeRelativeURL(url)
+      return recordings.first { $0.address == relativeURL }
     }
   }
 }

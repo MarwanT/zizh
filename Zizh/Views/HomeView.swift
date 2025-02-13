@@ -28,7 +28,11 @@ struct HomeView: View {
                 .contentShape(Rectangle())  // Ensures the whole row is tappable
                 .onTapGesture {
                   viewModel.handleRecordingTap(recording)
-                }.listRowBackground(Color.white.opacity(0.1))
+                }.listRowBackground(
+                  viewModel.currentPlayingId == recording.id ?
+                  Color.black :
+                    Color.white.opacity(0.1)
+                )
             }
             .onDelete(perform: viewModel.deleteRecording)
           }
