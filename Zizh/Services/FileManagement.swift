@@ -18,6 +18,7 @@ protocol FileManagement {
   func moveTemporaryRecordingToPersistedLocation(url: URL) -> URL?
   func isRelativeURL(_ url: URL) -> Bool
   func makeRelativeURL(_ url: URL) throws -> URL
+  func makeAbsoluteURL(_ url: URL) -> URL
 }
 
 enum FileManagementError: Error {
@@ -93,6 +94,11 @@ class DefaultFileManagement: FileManagement {
       throw FileManagementError.invalidFileURL
     }
     return relativeURL
+  }
+  
+  func makeAbsoluteURL(_ url: URL) -> URL {
+    guard isRelativeURL(url) else { return url }
+    return fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(url.path())
   }
   
   private func createDirectories(directories: [URL]) {

@@ -8,6 +8,7 @@
 import AVFoundation
 import Combine
 import Foundation
+import UIKit
 
 protocol RecordingService {
   var isRecordingPublisher: AnyPublisher<Bool, Never> { get }
@@ -58,10 +59,16 @@ class AudioRecordingService: NSObject, RecordingService {
   func startRecording() {
     do {
       try audioSession.setCategory(.playAndRecord, mode: .default)
-      try audioSession.setActive(true, options: [])
+      try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
       
       isRecording = true
       recorder.record()
+      
+      // Keep recording alive in background
+      var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+      backgroundTaskID = UIApplication.shared.beginBackgroundTask {
+        UIApplication.shared.endBackgroundTask(backgroundTaskID)
+      }
     } catch {
       // TODO: Handle the error correctly, inform the user
       print("Error starting audio file due to session failure: \(error)")
@@ -94,6 +101,7 @@ class AudioRecordingService: NSObject, RecordingService {
 extension AudioRecordingService: AVAudioRecorderDelegate {
   func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
     isRecording = false
+    UIApplication.shared.endBackgroundTask(.invalid)
     if flag {
       moveRecordingToDurableLocation()
     }

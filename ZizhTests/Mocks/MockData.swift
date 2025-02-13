@@ -8,7 +8,7 @@
 import Foundation
 @testable import Zizh
 
-struct MockData {
+class MockData: AnyObject {
   static func recordings(count: Int) -> [Recording] {
     var recordings: [Recording] = []
     for index in 0..<count {
@@ -20,5 +20,17 @@ struct MockData {
       recordings.append(recording)
     }
     return recordings
+  }
+  
+  static func audioRecordingURL() throws -> URL {
+    let bundle = Bundle(for: Self.self)
+    guard let url = bundle.url(forResource: "short-recording", withExtension: "m4a") else {
+      throw NSError(domain: "Could not load audio recording for testing purposes", code: 0, userInfo: nil)
+    }
+    return url
+  }
+  
+  static func invalidURL() -> URL {
+    return URL(string: "invalid-url")!
   }
 }

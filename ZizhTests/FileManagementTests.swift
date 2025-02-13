@@ -157,4 +157,30 @@ final class FileManagementTests {
     // Then
     #expect(resultURL == externalURL)
   }
+  
+  @Test("Converts a relative URL to absolut url within Documents")
+  func makeAbsoluteURLFromRelative() throws {
+    // Given
+    let relativeURL = URL(fileURLWithPath: "Recordings/recording1.m4a")
+    
+    // When
+    let absoluteURL = sut.makeAbsoluteURL(relativeURL)
+    
+    // Then
+    let expectedURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appending(path: relativeURL.path())
+    #expect(expectedURL.path() == absoluteURL.path())
+  }
+  
+  @Test("Returns the same URL when given an absolute URL")
+  func makeAbsoluteURLFromAbsolute() {
+    // Given
+    let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    let absoluteURL = documentsDirectory.appendingPathComponent("Recordings/recording1.m4a")
+    
+    // When
+    let resultURL = sut.makeAbsoluteURL(absoluteURL)
+    
+    // Then
+    #expect(resultURL == absoluteURL)
+  }
 }

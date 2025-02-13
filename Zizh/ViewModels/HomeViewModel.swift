@@ -19,20 +19,22 @@ extension ViewModel {
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
     @Published var audioPlayerAlertMessage: IdentifiableMessages? = nil
     
-    @Published var rate: Float = 1/8.0
+    @Published var rate: Float = 1/6.0
     
     private var recordingService: RecordingService!
     private var recordsRepository: any RecordsRepository
+    private var mediaPlayer: MediaPlayerService
     private var cancellables: Set<AnyCancellable> = []
     
     private var audioPlayer: AVAudioPlayer?
     private var audioEngine: AVAudioEngine?
     private var audioPlayerNode: AVAudioPlayerNode?
     
-    init (recordingService: RecordingService? = nil, recordsRepository: (any RecordsRepository)? = nil) {
+    init (recordingService: RecordingService? = nil, recordsRepository: (any RecordsRepository)? = nil, mediaPlayer: MediaPlayerService = AudioPlayerService()) {
       do {
         self.recordsRepository = try recordsRepository ?? AudioRecordsRepository()
         self.recordingService = try recordingService ?? AudioRecordingService()
+        self.mediaPlayer = mediaPlayer
         super.init()
         
         // Observe isRecording changes
@@ -48,6 +50,14 @@ extension ViewModel {
             Task { @MainActor in
               await self?.addRecording(recordingURL: recordingURL)
             }
+          }
+          .store(in: &cancellables)
+        
+        // Observe playback changes
+        mediaPlayer.status
+          .receive(on: DispatchQueue.main)
+          .sink { [weak self] status in
+            self?.handleMediaPlayerEvents(status)
           }
           .store(in: &cancellables)
       } catch {
@@ -119,7 +129,7 @@ extension ViewModel {
               switch error {
               case .repositoryDeallocated:
                 self?.deletionErrorMessage = IdentifiableMessages(message: "Failed to delete recording for repository is deallocated!")
-              case .deletionFailed(let deapError):
+              case .deletionFailed(_):
                 print("Failed to delete recording: \(error)")
                 self?.deletionErrorMessage = IdentifiableMessages(message: "Failed to delete recording: \(error.localizedDescription)")
               }
@@ -143,128 +153,31 @@ extension ViewModel {
     }
     
     private func playRecording(at url: URL) {
-      stopPlayingRecording()
-      
-      let absoluteURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(url.path())
-      guard FileManager.default.fileExists(atPath: absoluteURL.path()) else {
-        self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio file does not exist!")
-        return
-      }
-      
-      configureAudioSession()
-      if isSlowMotion {
-        playRecordingInSlowMotion(at: absoluteURL)
-      } else {
-        playRecordingNormally(at: absoluteURL)
+      let absoluteURL = recordsRepository.fileManagement.makeAbsoluteURL(url)
+      let result = isSlowMotion ? mediaPlayer.play(absoluteURL, mode: .slowMotion(rate)) : mediaPlayer.play(absoluteURL)
+      switch result {
+      case .success(let success):
+        isPlaying = true
+        break
+      case .failure(let error):
+        print("Failed to play recording: \(error)")
       }
     }
     
-    private func playRecordingNormally(at url: URL) {
-      do {
-        audioPlayer = try AVAudioPlayer(contentsOf: url)
-        audioPlayer!.delegate = self
-        audioPlayer!.prepareToPlay()
-        audioPlayer!.play()
-      } catch {
-        print("Error playing recording: \(error.localizedDescription)")
-      }
+    func stopPlayingRecording() {
+      mediaPlayer.stop()
     }
     
-    private func playRecordingInSlowMotion(at url: URL) {
-      audioEngine = AVAudioEngine()
-      audioPlayerNode = AVAudioPlayerNode()
-      guard let audioEngine = audioEngine, let audioPlayerNode = audioPlayerNode else { return }
-      
-      let timePitch = AVAudioUnitTimePitch()
-      timePitch.rate = rate // 4x slowdown
-      timePitch.pitch = log2(rate) * 1200 // Adjust pitch to avoid robotic sound
-      print("Rate: \(rate) ; Pitch: \(timePitch.pitch)")
-      
-      // Attach all nodes first
-      audioEngine.attach(audioPlayerNode)
-      audioEngine.attach(timePitch)
-      
-      // Connect nodes in sequence
-      audioEngine.connect(audioPlayerNode, to: timePitch, format: nil)
-      audioEngine.connect(timePitch, to: audioEngine.mainMixerNode, format: nil)
-      
-      
-      guard let audioFile = try? AVAudioFile(forReading: url) else {
-        print("Failed to load audio file.")
-        return
-      }
-      
-      // Start engine first
-      do {
-        try audioEngine.start()
-        
-        // Schedule audio after engine is running
-        audioPlayerNode.scheduleFile(audioFile, at: nil) { [weak self] in
-          self?.audioEngine?.stop()
-        }
-        
-        // Add minimal hardware sync delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-          audioPlayerNode.play()
-        }
-      } catch {
-        print("Engine start failed: \(error)")
+    private func handleMediaPlayerEvents(_ status: MediaPlayerStatus) {
+      // Media Player Status Changed
+      print("Media Player Status Changed: \(status)")
+      switch status {
+      case .paused, .stopped:
+        isPlaying = false
+      default:
+        break
       }
     }
-    
-    private func stopPlayingRecording() {
-      stopRecordingPlayingNormally()
-      stopRecordingPlayingInSlowMotion()
-    }
-    
-    private func stopRecordingPlayingNormally() {
-      guard let audioPlayer = audioPlayer else {
-        return
-      }
-      audioPlayer.stop()
-      self.audioPlayer = nil
-    }
-    
-    private func stopRecordingPlayingInSlowMotion() {
-      guard audioEngine != nil, audioPlayerNode != nil else {
-        return
-      }
-      audioPlayerNode?.stop()
-      try? audioEngine?.stop()
-      audioEngine = nil
-      audioPlayerNode = nil
-    }
-    
-    private func configureAudioSession() {
-      let audioSession = AVAudioSession.sharedInstance()
-      do {
-        // Set the audio session category to play and record, and default to speaker
-        try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker])
-        // Activate the audio session
-        try audioSession.setActive(true)
-      } catch {
-        print("Failed to set up audio session: \(error.localizedDescription)")
-      }
-    }
-  }
-}
-
-extension ViewModel.Home: AVAudioPlayerDelegate {
-  func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-    self.audioPlayer = nil
-  }
-
-  func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: (any Error)?) {
-    self.audioPlayer = nil
-    self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio player audio decoding error occurred")
-  }
-
-  func audioPlayerBeginInterruption(_ player: AVAudioPlayer) {
-    print("Audio player was Interrupted")
-  }
-
-  func audioPlayerEndInterruption(_ player: AVAudioPlayer, withOptions flags: Int) {
-    print("Audio player interruption ended")
   }
 }
 
