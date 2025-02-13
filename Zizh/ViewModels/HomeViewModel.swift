@@ -11,9 +11,15 @@ import Combine
 
 extension ViewModel {
   class Home: NSObject, ObservableObject {
-    @Published private(set) var isRecording: Bool = false
+    @Published private(set) var isRecording: Bool = false {
+      didSet {
+        handleIsRecordingFlagChanges()
+      }
+    }
     @Published private(set) var isSlowMotion: Bool = false
     @Published private(set) var currentPlayingId: UUID? = nil
+    @Published var elapsedTimeString = "00:00"
+   
     
     @Published var recordings: [Recording] = []
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
@@ -29,6 +35,9 @@ extension ViewModel {
     private var audioPlayer: AVAudioPlayer?
     private var audioEngine: AVAudioEngine?
     private var audioPlayerNode: AVAudioPlayerNode?
+    
+    private var recordingStartDate: Date?
+    private var timer: AnyCancellable?
     
     init (recordingService: RecordingService? = nil, recordsRepository: (any RecordsRepository)? = nil, mediaPlayer: MediaPlayerService = AudioPlayerService()) {
       do {
@@ -64,6 +73,10 @@ extension ViewModel {
         print("Error Initialising ViewModel: \(error)")
         exit(1)
       }
+    }
+    
+    deinit {
+      stopTimer()
     }
     
     func requestPermissions() {
@@ -183,6 +196,42 @@ extension ViewModel {
     private func recordingFromURL(_ url: URL) -> Recording? {
       let relativeURL = try? recordsRepository.fileManagement.makeRelativeURL(url)
       return recordings.first { $0.address == relativeURL }
+    }
+    
+    private func startTimer() {
+      recordingStartDate = Date()
+      timer?.cancel()  // Cancel previous timer if any
+      
+      // Create new timer subscription
+      timer = Timer.publish(every: 1, on: .main, in: .common)
+        .autoconnect()
+        .sink { [weak self] _ in
+          guard let self = self, let startDate = self.recordingStartDate else { return }
+          let elapsed = Date().timeIntervalSince(startDate)
+          self.updateTimeString(time: elapsed)
+        }
+    }
+    
+    private func stopTimer() {
+      timer?.cancel()
+      timer = nil
+      elapsedTimeString = "00:00"
+    }
+    
+    private func updateTimeString(time: TimeInterval) {
+      let formatter = DateComponentsFormatter()
+      formatter.allowedUnits = [.minute, .second]
+      formatter.unitsStyle = .positional
+      formatter.zeroFormattingBehavior = .pad
+      elapsedTimeString = formatter.string(from: time) ?? "00:00"
+    }
+    
+    private func handleIsRecordingFlagChanges() {
+      if isRecording {
+        startTimer()
+      } else {
+        stopTimer()
+      }
     }
   }
 }

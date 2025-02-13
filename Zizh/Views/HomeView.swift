@@ -21,7 +21,7 @@ struct HomeView: View {
     NavigationStack {
       ZStack {
         Color.black.ignoresSafeArea()
-        VStack {
+        ZStack {
           List {
             ForEach(viewModel.recordings, id: \.id) { recording in
               RecordingRow(recording: recording)
@@ -60,15 +60,43 @@ struct HomeView: View {
               }.tint(viewModel.isSlowMotion ? Color.green : Color.gray)
             }
           }
-          Spacer()
-          Button {
-            withAnimation(.easeOut(duration: 1)) {
-              viewModel.toggleRecording()
+          .contentMargins(.bottom, 100, for: .scrollContent)
+          .padding(.bottom, 16)
+          VStack {
+            Spacer()
+            // Add recording timer and button in HStack
+            // Modified recording controls
+            ZStack {
+              // Timer positioned to the left
+              HStack {
+                if viewModel.isRecording {
+                  Text(viewModel.elapsedTimeString)
+                    .font(.system(size: 20, weight: .bold, design: .monospaced))
+                    .foregroundColor(.red)
+                    .transition(.asymmetric(
+                      insertion: .move(edge: .leading).combined(with: .opacity),
+                      removal: .opacity
+                    ))
+                    .padding(.leading, 20)
+                  Spacer() // Push timer to left
+                }
+              }
+              .frame(maxWidth: .infinity)
+              .padding(.horizontal)
+              
+              // Centered record button
+              Button {
+                withAnimation(.easeOut(duration: 1)) {
+                  viewModel.toggleRecording()
+                }
+              } label: {
+                RoundedRectangle(cornerRadius: viewModel.isRecording ? 20 : 40)
+                  .fill(Color.red)
+                  .frame(width: 80, height: 80)
+              }
             }
-          } label: {
-            RoundedRectangle(cornerRadius: viewModel.isRecording ? 20 : 40)
-              .fill(Color.red)
-              .frame(width: 80, height: 80)
+            .padding(18)
+            .background(Color.black.opacity(0.6))
           }
         }
         .task {
@@ -86,13 +114,13 @@ struct HomeView: View {
         TextField("Enter new value", text: $editedText) // Editable text field
         Button("Cancel", role: .cancel) { }
         Button("Done") {
-            if let newRate = Float(editedText) {
-                viewModel.rate = newRate
-            }
+          if let newRate = Float(editedText) {
+            viewModel.rate = newRate
+          }
         }
-    } message: {
+      } message: {
         Text("Enter a new value:")
-    }
+      }
     }
   }
 }
