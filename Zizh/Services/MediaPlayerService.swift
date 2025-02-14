@@ -21,7 +21,7 @@ enum PlayMode {
   case slowMotion(_ rate: Float)
 }
 
-enum MediaPlayerStatus {
+enum MediaPlayerStatus: Equatable {
   case playing(_ url: URL)
   case paused(_ url: URL)
   case stopped

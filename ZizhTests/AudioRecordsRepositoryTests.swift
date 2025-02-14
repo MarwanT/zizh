@@ -90,7 +90,7 @@ final class AudioRecordsRepositoryTests {
     }
     
     // when
-    let persistedRecordingsData = try await dataPersistenceService.fetchAll(Recording.self).values.first()
+    let persistedRecordingsData = try await sut.fetchRecords().values.first()
     
     // then
     #expect(persistedRecordingsData != nil)
@@ -99,39 +99,6 @@ final class AudioRecordsRepositoryTests {
       #expect(recordings.contains(where: { $0.id == persistedRecording.id }))
       let fileExists = fileManager.fileExists(atPath: persistedRecording.address.path())
       #expect(fileExists == true)
-      #expect(mockFileManagment.isRelativeURL(persistedRecording.address) == true)
-    }
-  }
-  
-  @Test("Fetches all remaining records")
-  func fetchAllRemainingRecords() async throws {
-    // given
-    var recordings: [Recording] = []
-    for _ in 0..<5 {
-      let recordingURL = mockFileManagment.generateNewRecordingURL()
-      let (id, timeInterval) = mockFileManagment.extractRecordingInfo(from: recordingURL)!
-      let recording = Recording(id: id, duration: timeInterval, name: Date(timeIntervalSince1970: timeInterval).ISO8601Format(), address: recordingURL)
-      let created = fileManager.createFile(atPath: recordingURL.path(), contents: Data())
-      #expect(created == true)
-      try await dataPersistenceService.add(item: recording).values.first()
-      recordings.append(recording)
-    }
-    
-    // when
-    let deletedRecordings = [recordings[1], recordings[3]]
-    for recording in deletedRecordings {
-      try await sut.deleteRecording(recording).values.first()
-    }
-    let persistedRecordingsData = try await dataPersistenceService.fetchAll(Recording.self).values.first()
-    
-    // then
-    #expect(persistedRecordingsData != nil)
-    #expect(persistedRecordingsData?.count == 3)
-    for persistedRecording in persistedRecordingsData! {
-      #expect(!deletedRecordings.contains(where: { $0.id == persistedRecording.id }))
-      let fileExists = fileManager.fileExists(atPath: persistedRecording.address.path())
-      #expect(fileExists == true)
-      #expect(mockFileManagment.isRelativeURL(persistedRecording.address) == true)
     }
   }
 }

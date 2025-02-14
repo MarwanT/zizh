@@ -36,7 +36,7 @@ final class MediaPlayerServiceTests {
     
     // Then
     #expect(result == .success(true))
-    #expect(playStatus == .playing)
+    #expect(playStatus == .playing(url))
     
     // Wait until audio finishes
     let finishStatus = await sut.status.values.dropFirst().first()
@@ -57,7 +57,7 @@ final class MediaPlayerServiceTests {
     
     // Then
     #expect(result == .success(true))
-    #expect(playStatus == .playing)
+    #expect(playStatus == .playing(url))
     
     // Wait until audio finishes
     let finishStatus = await sut.status.values.dropFirst().first()
@@ -105,7 +105,7 @@ final class MediaPlayerServiceTests {
     let result = sut.play(url)
     let playStatus = await sut.status.values.first()
     #expect(result == .success(true))
-    #expect(playStatus == .playing)
+    #expect(playStatus == .playing(url))
     
     // When
     try await Task.sleep(for: .seconds(2))
@@ -126,7 +126,7 @@ final class MediaPlayerServiceTests {
     let result = sut.play(url, mode: mode)
     let playStatus = await sut.status.values.first()
     #expect(result == .success(true))
-    #expect(playStatus == .playing)
+    #expect(playStatus == .playing(url))
     
     // When
     try await Task.sleep(for: .seconds(4))
