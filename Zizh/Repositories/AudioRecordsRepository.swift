@@ -46,6 +46,39 @@ class AudioRecordsRepository: RecordsRepository {
     }.eraseToAnyPublisher()
   }
   
+  func updateRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
+    Future { [weak self] promise in
+      Task { @MainActor in
+        guard let self else {
+          promise(.failure(.repositoryDeallocated))
+          return
+        }
+        
+        do {
+          let recordId = entity.id
+          let predicate = #Predicate<Recording> { $0.id == recordId }
+          let recordings = try await self.dataPersistence.fetch(Recording.self, predicate: predicate, sortBy: [])
+            .values
+            .first(where: { _ in true }) ?? []
+          guard let recording = recordings.first else {
+            throw RepositoryError.noRecordsFound
+          }
+          recording.name = entity.name
+          recording.duration = entity.duration
+          recording.address = entity.address
+          try await self.dataPersistence.update(item: recording)
+            .mapError { RepositoryError.unknown($0) }
+            .values
+            .first(where: { _ in true })
+          promise(.success(()))
+        } catch {
+          promise(.failure(error as? RepositoryError ?? .unknown(error)))
+        }
+      }
+    }
+    .eraseToAnyPublisher()
+  }
+  
   func deleteRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
     return Future<Void, RepositoryError> { [weak self] promise in
       guard let self = self else {

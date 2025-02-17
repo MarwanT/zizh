@@ -160,6 +160,28 @@ extension ViewModel {
       togglePlayPause(entity)
     }
     
+    func updateRecording(_ recordingId: UUID, name: String) async {
+      guard var recording = records.first(where: { $0.id == recordingId }) else {
+        return
+      }
+      recording.name = name
+      do {
+        // Convert the publisher to an async sequence and await its completion
+        try await recordsRepository.updateRecording(recording)
+          .mapError { $0 as Error } // Convert RepositoryError to Error
+          .values
+          .first(where: { _ in true }) // Wait for the first value (completion)
+        
+        // Ensure UI updates are on the main thread
+        await MainActor.run {
+          syncRecordings()
+        }
+      } catch {
+        print("Failed to update recording: \(error)")
+        // Handle the error here
+      }
+    }
+    
     private func togglePlayPause(_ entity: any RecordDataEntity) {
       currentPlayingId != nil ? stopPlayingRecording() : playRecording(entity)
     }

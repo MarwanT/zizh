@@ -13,9 +13,13 @@ protocol RecordsRepository {
   func addRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError>
   func deleteRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError>
   func fetchRecords() -> AnyPublisher<[any RecordDataEntity], RepositoryError>
+  func updateRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError>
 }
 
 enum RepositoryError: Error {
-    case repositoryDeallocated
-    case deletionFailed(Error)
+  case deletionFailed(Error)
+  case noRecordsFound
+  case repositoryDeallocated
+  case dataPersistence(DataPersistenceError)
+  case unknown(Error)
 }

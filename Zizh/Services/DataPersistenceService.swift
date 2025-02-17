@@ -20,6 +20,7 @@ enum DataPersistenceError: Error {
 protocol DataPersistenceService {
   @MainActor func add(item: any Persistable) -> AnyPublisher<Void, DataPersistenceError>
   @MainActor func remove(item: any Persistable) -> AnyPublisher<Void, DataPersistenceError>
+  @MainActor func update(item: any Persistable) -> AnyPublisher<Void, DataPersistenceError>
   @MainActor func fetchAll<T: Persistable>(_ type: T.Type) -> AnyPublisher<[T], DataPersistenceError>
   @MainActor func fetchAll<T: Persistable>(_ type: T.Type, sortBy: [Sorting<T>]) -> AnyPublisher<[T], DataPersistenceError>
   @MainActor func fetch<T: Persistable>(_ type: T.Type, predicate: Predicate<T>?, sortBy: [Sorting<T>]) -> AnyPublisher<[T], DataPersistenceError>
@@ -37,6 +38,13 @@ class SwiftDataService: DataPersistenceService {
   func add(item: any Persistable) -> AnyPublisher<Void, DataPersistenceError> {
     return Future<Void, DataPersistenceError> { [unowned self] promise in
       self.modelContainer.mainContext.insert(item)
+      self.save()
+      promise(.success(()))
+    }.eraseToAnyPublisher()
+  }
+  
+  func update(item: any Persistable) -> AnyPublisher<Void, DataPersistenceError> {
+    return Future<Void, DataPersistenceError> { [unowned self] promise in
       self.save()
       promise(.success(()))
     }.eraseToAnyPublisher()

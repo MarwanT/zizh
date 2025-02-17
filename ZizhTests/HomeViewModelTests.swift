@@ -95,6 +95,18 @@ final class HomeViewModelTests {
     #expect(recordings?.count == 2)
   }
   
+  @Test("Updates a recording name successfully")
+  func savesAnEditedRecordingName() async throws {
+    // Given
+    mockRecordsRepository.persistedRecords = MockData.recordingsData(count: 10)
+    let targettedRecording = mockRecordsRepository.persistedRecords[3]
+    // When
+    let updatedName = "Birds Singing"
+    await sut.updateRecording(targettedRecording.id, name: updatedName)
+    // Then
+    #expect(targettedRecording.name == updatedName)
+  }
+  
   @Test("Fetches recordings from the repository with 10 recordings")
   func fetchRecordingsFromRepository_ManyRecordings() async throws {
     // given

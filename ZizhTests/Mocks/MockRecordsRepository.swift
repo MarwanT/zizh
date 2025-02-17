@@ -39,4 +39,14 @@ final class MockRecordRepository: RecordsRepository {
       promise(.success(()))
     }.eraseToAnyPublisher()
   }
+  
+  func updateRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
+    guard let index = persistedRecords.firstIndex(where: { $0.id == entity.id }) else {
+      return addRecording(RecordingData.entityFrom(entity) as RecordingData)
+    }
+    persistedRecords[index] = entity
+    return Future<Void, RepositoryError> { promise in
+      promise(.success(()))
+    }.eraseToAnyPublisher()
+  }
 }

@@ -23,16 +23,20 @@ struct HomeView: View {
         Color.black.ignoresSafeArea()
         ZStack {
           List {
-            ForEach(viewModel.recordings, id: \.id) { recording in
-              RecordingRow(recording: recording)
-                .contentShape(Rectangle())  // Ensures the whole row is tappable
-                .onTapGesture {
-                  viewModel.handleRecordingTap(recording)
-                }.listRowBackground(
-                  viewModel.currentPlayingId == recording.id ?
-                  Color.black :
-                    Color.white.opacity(0.1)
-                )
+            ForEach(viewModel.records, id: \.id) { recording in
+              RecordingRow(recordEntity: recording) { id, newName in
+                Task {
+                  await viewModel.updateRecording(id, name: newName)
+                }
+              }
+              .contentShape(Rectangle())  // Ensures the whole row is tappable
+              .onTapGesture {
+                viewModel.handleRecordingTap(recording)
+              }.listRowBackground(
+                viewModel.currentPlayingId == recording.id ?
+                Color.black :
+                  Color.white.opacity(0.1)
+              )
             }
             .onDelete(perform: viewModel.deleteRecording)
           }
