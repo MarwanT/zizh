@@ -10,9 +10,9 @@ import Foundation
 
 protocol RecordsRepository {
   var fileManagement: FileManagement { get }
-  func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError>
-  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError>
-  func fetchRecords() -> AnyPublisher<[Recording], RepositoryError>
+  func addRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError>
+  func deleteRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError>
+  func fetchRecords() -> AnyPublisher<[any RecordDataEntity], RepositoryError>
 }
 
 enum RepositoryError: Error {

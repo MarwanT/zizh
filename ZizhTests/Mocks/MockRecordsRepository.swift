@@ -10,7 +10,7 @@ import Foundation
 @testable import Zizh
 
 final class MockRecordRepository: RecordsRepository {
-  var persistedRecords: [Recording] = []
+  var persistedRecords: [any RecordDataEntity] = []
 
   var fileManagement: any Zizh.FileManagement
   
@@ -18,23 +18,23 @@ final class MockRecordRepository: RecordsRepository {
     self.fileManagement = fileManagement
   }
   
-  func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+  func addRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
     return Future<Void, RepositoryError> { [unowned self] promise in
-      persistedRecords.append(recording)
+      persistedRecords.append(entity)
       promise(.success(()))
     }.eraseToAnyPublisher()
   }
   
-  func fetchRecords() -> AnyPublisher<[Recording], RepositoryError> {
-    return Future<[Recording], RepositoryError> { [unowned self] promise in
+  func fetchRecords() -> AnyPublisher<[any RecordDataEntity], RepositoryError> {
+    return Future<[any RecordDataEntity], RepositoryError> { [unowned self] promise in
       promise(.success(self.persistedRecords))
     }.eraseToAnyPublisher()
   }
   
-  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+  func deleteRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
     return Future<Void, RepositoryError> { [unowned self] promise in
       persistedRecords = persistedRecords.filter({ current in
-        return current.id != recording.id
+        return current.id != entity.id
       })
       promise(.success(()))
     }.eraseToAnyPublisher()

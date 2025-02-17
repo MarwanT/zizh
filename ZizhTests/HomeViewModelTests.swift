@@ -98,35 +98,35 @@ final class HomeViewModelTests {
   @Test("Fetches recordings from the repository with 10 recordings")
   func fetchRecordingsFromRepository_ManyRecordings() async throws {
     // given
-    mockRecordsRepository.persistedRecords = MockData.recordings(count: 10) 
+    mockRecordsRepository.persistedRecords = MockData.recordingsData(count: 10) 
     
     // when
     sut.syncRecordings()
     try await Task.sleep(for: .milliseconds(200))
     
     // then
-    let results = await sut.$recordings.values.first()
-    #expect(mockRecordsRepository.persistedRecords == results)
+    let results = await sut.$records.values.first()!
+    #expect(mockRecordsRepository.persistedRecords as! [RecordingData] == results as! [RecordingData])
   }
   
   @Test("Fetches recordings from the repository with 0 recordings")
   func fetchRecordingsFromRepository_NoRecordings() async throws {
     // given
-    mockRecordsRepository.persistedRecords = MockData.recordings(count: 0) 
+    mockRecordsRepository.persistedRecords = MockData.recordingsData(count: 0) 
     
     // when
     sut.syncRecordings()
     try await Task.sleep(for: .milliseconds(200))
     
     // then
-    let results = await sut.$recordings.values.first()!.map { $0 }
-    #expect(mockRecordsRepository.persistedRecords == results)
+    let results = await sut.$records.values.first()!
+    #expect(mockRecordsRepository.persistedRecords as! [RecordingData] == results as! [RecordingData])
   }
   
   @Test
   func deleteRecordingSuccessfully() async throws {
     // given
-    mockRecordsRepository.persistedRecords = MockData.recordings(count: 11)
+    mockRecordsRepository.persistedRecords = MockData.recordingsData(count: 11)
     let deletedRecordingIndex = 1
     let deletedRecording = mockRecordsRepository.persistedRecords[deletedRecordingIndex]
     sut.syncRecordings()
@@ -137,6 +137,6 @@ final class HomeViewModelTests {
     
     // then
     #expect(mockRecordsRepository.persistedRecords.count == 10)
-    #expect(!mockRecordsRepository.persistedRecords.contains(deletedRecording))
+    #expect(try! mockRecordsRepository.persistedRecords.contains(where: { $0.id == deletedRecording.id }) == false)
   }
 }

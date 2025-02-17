@@ -19,14 +19,16 @@ class AudioRecordsRepository: RecordsRepository {
     self.fileManagement = fileManagement
   }
   
-  func addRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+  func addRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
+    var sanitizedData = entity
+    sanitizedData.address = makeAddressRelativeIfNeeded(entity.address)
     return Future<Void, RepositoryError> { [weak self] promise in
       guard let self = self else {
         promise(.failure(.repositoryDeallocated))
         return
       }
-      makeAddressRelativeIfNeeded(recording)
       Task { @MainActor in
+        let recording: Recording = Recording.entityFrom(sanitizedData)
         self.dataPersistence.add(item: recording)
           .receive(on: DispatchQueue.main)
           .sink { completion in
@@ -44,34 +46,51 @@ class AudioRecordsRepository: RecordsRepository {
     }.eraseToAnyPublisher()
   }
   
-  func deleteRecording(_ recording: Recording) -> AnyPublisher<Void, RepositoryError> {
+  func deleteRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
     return Future<Void, RepositoryError> { [weak self] promise in
       guard let self = self else {
         promise(.failure(.repositoryDeallocated))
         return
       }
       Task { @MainActor in
-        self.dataPersistence.remove(item: recording)
+        let recordingId = entity.id
+        let predicate = #Predicate<Recording> { $0.id == recordingId }
+        self.dataPersistence.fetch(Recording.self, predicate: predicate, sortBy: [])
           .receive(on: DispatchQueue.main)
+          .tryMap { recordings in
+            guard let recording = recordings.first else {
+              throw RepositoryError.noRecordsFound
+            }
+            return recording
+          }
+          .mapError { error -> RepositoryError in
+            return error as? RepositoryError ?? .unknown(error)
+          }
+          .flatMap { [weak self] recording -> AnyPublisher<Void, RepositoryError> in
+            guard let self = self else {
+              return Fail(error: .repositoryDeallocated).eraseToAnyPublisher()
+            }
+            return self.dataPersistence.remove(item: recording)
+              .mapError { error -> RepositoryError in
+                return .dataPersistence(error)
+              }
+              .eraseToAnyPublisher()
+          }
           .sink { completion in
             switch completion {
             case .failure(let error):
-              print("Error deleting recording: \(error)")
+              promise(.failure(error))
             case .finished:
-              break
+              promise(.success(()))
             }
-          } receiveValue: {
-            // TODO: Delete the audio file
-            self.fileManagement.deleteRecording(at: recording.address)
-            promise(.success(()))
-          }
+          } receiveValue: { _ in }
           .store(in: &(self.cancellables))
       }
     }.eraseToAnyPublisher()
   }
   
-  func fetchRecords() -> AnyPublisher<[Recording], RepositoryError> {
-    return Future<[Recording], RepositoryError> { [weak self] promise in
+  func fetchRecords() -> AnyPublisher<[any RecordDataEntity], RepositoryError> {
+    return Future<[any RecordDataEntity], RepositoryError> { [weak self] promise in
       guard let self = self else {
         promise(.failure(.repositoryDeallocated))
         return
@@ -88,7 +107,7 @@ class AudioRecordsRepository: RecordsRepository {
               break
             }
           } receiveValue: { recordings in
-            promise(.success(recordings))
+            promise(.success(recordings.map { RecordingData.entityFrom($0) as RecordingData }))
           }
           .store(in: &(self.cancellables))
         
@@ -96,15 +115,16 @@ class AudioRecordsRepository: RecordsRepository {
     }.eraseToAnyPublisher()
   }
   
-  private func makeAddressRelativeIfNeeded(_ recording: Recording) {
-    guard !fileManagement.isRelativeURL(recording.address) else {
-      return
+  private func makeAddressRelativeIfNeeded(_ url: URL) -> URL {
+    guard !fileManagement.isRelativeURL(url) else {
+      return url
     }
     do {
-      let relativeURL = try fileManagement.makeRelativeURL(recording.address)
-      recording.address = relativeURL
+      let relativeURL = try fileManagement.makeRelativeURL(url)
+      return relativeURL
     } catch {
       print("Fail to make address relative: \(error)")
+      return url
     }
   }
 }

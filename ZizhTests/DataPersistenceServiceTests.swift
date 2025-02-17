@@ -21,7 +21,7 @@ final class SwiftDataServiceTests {
   @Test("Adds a new Item Successfully")
   func addItemSuccessfully() async throws {
     // given
-    let recordings = MockData.recordings(count: 1)
+    let recordings = MockData.recordingsData(count: 1)
     // when
     try await sut.add(item: recordings[0]).values.first()
     try await Task.sleep(for: .milliseconds(500))
@@ -35,7 +35,7 @@ final class SwiftDataServiceTests {
   @Test("Removes an added Item Successfully")
   func removeExistingItem() async throws {
     // given
-    let recordings = MockData.recordings(count: 2)
+    let recordings = MockData.recordingsData(count: 2)
     for recording in recordings {
       try await sut.add(item: recording).values.first()
       try await Task.sleep(for: .milliseconds(500))
@@ -52,7 +52,7 @@ final class SwiftDataServiceTests {
   @Test("Fails to remove a non existing item")
   func removeNonExistingItem() async throws {
     // given
-    let recordings = MockData.recordings(count: 2)
+    let recordings = MockData.recordingsData(count: 2)
     try await sut.add(item: recordings[0]).values.first()
     // when
     try await sut.remove(item: recordings[1]).values.first()
@@ -66,7 +66,7 @@ final class SwiftDataServiceTests {
   @Test("Fetches all persisted Items Successfully")
   func fetchAllItemsSuccessfully() async throws {
     // given
-    let recordings = MockData.recordings(count: 3)
+    let recordings = MockData.recordingsData(count: 3)
     for recording in recordings {
       try await sut.add(item: recording).values.first()
       try await Task.sleep(for: .milliseconds(500))
@@ -85,7 +85,7 @@ final class SwiftDataServiceTests {
   @Test("Fetches a specific persisted Item by id Successfully")
   func fetchItemSuccessfully() async throws {
     // given
-    let recordings = MockData.recordings(count: 3)
+    let recordings = MockData.recordingsData(count: 3)
     let viewedRecording = recordings[2]
     for recording in recordings {
       try await sut.add(item: recording).values.first()
@@ -107,7 +107,7 @@ final class SwiftDataServiceTests {
   @Test("Fetches multiple persisted Items for predicate Successfully")
   func fetchItemsSuccessfully() async throws {
     // given
-    let recordings = MockData.recordings(count: 3)
+    let recordings = MockData.recordingsData(count: 3)
     let viewedRecordingsIds = [recordings[0].id, recordings[2].id]
     for recording in recordings {
       try await sut.add(item: recording).values.first()

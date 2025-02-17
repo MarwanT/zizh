@@ -20,8 +20,7 @@ extension ViewModel {
     @Published private(set) var currentPlayingId: UUID? = nil
     @Published var elapsedTimeString = "00:00"
    
-    
-    @Published var recordings: [Recording] = []
+    @Published var records: [any RecordDataEntity] = []
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
     @Published var audioPlayerAlertMessage: IdentifiableMessages? = nil
     
@@ -94,7 +93,7 @@ extension ViewModel {
         .sink(receiveCompletion: { completion in
           print("Syncing is completed")
         }, receiveValue: { [weak self] recordings in
-          self?.recordings = recordings
+          self?.records = recordings
         })
         .store(in: &cancellables)
     }
@@ -119,7 +118,7 @@ extension ViewModel {
       }
       let date = Date(timeIntervalSince1970: timeInterval)
       let duration = await self.recordingService.getRecordingDuration(url: recordingURL)
-      let newRecording = Recording(id: id, duration: duration, name: date.ISO8601Format(), address: recordingURL)
+      let newRecording = RecordingData(id: id, duration: duration, name: date.ISO8601Format(), address: recordingURL)
       self.recordsRepository.addRecording(newRecording)
         .receive(on: DispatchQueue.main)
         .sink { _ in
@@ -133,7 +132,7 @@ extension ViewModel {
     
     func deleteRecording(at offsets: IndexSet) {
       for index in offsets {
-        let recording = recordings[index]
+        let recording = records[index]
         recordsRepository.deleteRecording(recording)
           .receive(on: DispatchQueue.main)
           .sink { [weak self] completion in
@@ -145,28 +144,28 @@ extension ViewModel {
               case .deletionFailed(_):
                 print("Failed to delete recording: \(error)")
                 self?.deletionErrorMessage = IdentifiableMessages(message: "Failed to delete recording: \(error.localizedDescription)")
+              default:
+                break
               }
             case .finished:
-              break
+              guard let self = self else { return }
+              self.records.remove(at: index)
             }
-          } receiveValue: { [weak self] _ in
-            guard let self = self else { return }
-            self.recordings.remove(at: index)
-          }
+          } receiveValue: { _ in }
           .store(in: &cancellables)
       }
     }
     
-    func handleRecordingTap(_ recording: Recording) {
-      togglePlayPause(recording)
+    func handleRecordingTap(_ entity: any RecordDataEntity) {
+      togglePlayPause(entity)
     }
     
-    private func togglePlayPause(_ recording: Recording) {
-      currentPlayingId != nil ? stopPlayingRecording() : playRecording(recording)
+    private func togglePlayPause(_ entity: any RecordDataEntity) {
+      currentPlayingId != nil ? stopPlayingRecording() : playRecording(entity)
     }
     
-    private func playRecording(_ recording: Recording) {
-      let absoluteURL = recordsRepository.fileManagement.makeAbsoluteURL(recording.address)
+    private func playRecording(_ entity: any RecordDataEntity) {
+      let absoluteURL = recordsRepository.fileManagement.makeAbsoluteURL(entity.address)
       let result = isSlowMotion ? mediaPlayer.play(absoluteURL, mode: .slowMotion(rate)) : mediaPlayer.play(absoluteURL)
       switch result {
       case .success(_):
@@ -193,9 +192,9 @@ extension ViewModel {
       }
     }
     
-    private func recordingFromURL(_ url: URL) -> Recording? {
+    private func recordingFromURL(_ url: URL) -> (any RecordDataEntity)? {
       let relativeURL = try? recordsRepository.fileManagement.makeRelativeURL(url)
-      return recordings.first { $0.address == relativeURL }
+      return records.first { $0.address == relativeURL }
     }
     
     private func startTimer() {
@@ -239,16 +238,16 @@ extension ViewModel {
 extension ViewModel.Home {
   class ViewModelHomePreview: ViewModel.Home {
     override func syncRecordings() {
-      self.recordings = [
-        Recording(duration: 10, name: "Sample Recording", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording2", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording3", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording4", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording5", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording6", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording7", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording8", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        Recording(duration: 10, name: "Sample Recording9", address: URL(fileURLWithPath: "/zouzou/marwan")),
+      self.records = [
+        RecordingData(duration: 10, name: "Sample Recording", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording2", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording3", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording4", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording5", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording6", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording7", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording8", address: URL(fileURLWithPath: "/zouzou/marwan")),
+        RecordingData(duration: 10, name: "Sample Recording9", address: URL(fileURLWithPath: "/zouzou/marwan")),
       ]
     }
   }
