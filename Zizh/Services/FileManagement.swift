@@ -63,10 +63,11 @@ class DefaultFileManagement: FileManagement {
   }
   
   func deleteRecording(at url: URL) {
+    var absoluteURL = isRelativeURL(url) ? makeAbsoluteURL(url) : url
     do {
-      try fileManager.removeItem(at: url)
+      try fileManager.removeItem(at: absoluteURL)
     } catch {
-      print("Error deleting recording at \(url): \(error)")
+      print("Error deleting recording at \(absoluteURL): \(error)")
     }
   }
   

@@ -35,11 +35,12 @@ class AudioRecordsRepository: RecordsRepository {
             switch completion {
             case .failure(let error):
               print("Error adding recording: \(error)")
+              promise(.failure(.dataPersistence(error)))
             case .finished:
-              break
+              promise(.success(()))
             }
           } receiveValue: {
-            promise(.success(()))
+            
           }
           .store(in: &(self.cancellables))
       }
@@ -107,6 +108,11 @@ class AudioRecordsRepository: RecordsRepository {
               .mapError { error -> RepositoryError in
                 return .dataPersistence(error)
               }
+              .handleEvents(receiveCompletion: { completion in
+                if case .finished = completion {
+                  self.fileManagement.deleteRecording(at: recording.address)
+                }
+              })
               .eraseToAnyPublisher()
           }
           .sink { completion in

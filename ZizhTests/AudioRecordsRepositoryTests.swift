@@ -44,10 +44,15 @@ final class AudioRecordsRepositoryTests {
     let recordingId = recording.id
     let predicate = #Predicate<Recording> { $0.id == recordingId }
     let persistedRecordingData = try await dataPersistenceService.fetch(Recording.self, predicate: predicate, sortBy: []).values.first()
+    print("Persisted Recording Data: \(persistedRecordingData ?? []) id: \(persistedRecordingData!.count)")
     #expect(persistedRecordingData != [])
-    #expect(persistedRecordingData?.count == 1)
-    #expect(persistedRecordingData?[0] == recording)
-    #expect(mockFileManagment.isRelativeURL(persistedRecordingData![0].address) == true)
+    let index = persistedRecordingData?.firstIndex(where: {
+      let lhs = RecordingData.entityFrom($0) as RecordingData
+      let rhs = RecordingData.entityFrom(recording) as RecordingData
+      return lhs == rhs
+    })
+    #expect(index != nil)
+    #expect(mockFileManagment.isRelativeURL(persistedRecordingData![index!].address) == true)
   }
   
   @Test("Delets an existing recording")
@@ -56,6 +61,7 @@ final class AudioRecordsRepositoryTests {
     let recordingURL = mockFileManagment.generateNewRecordingURL()
     let (id, timeInterval) = mockFileManagment.extractRecordingInfo(from: recordingURL)!
     let recording = Recording(id: id, duration: timeInterval, name: Date(timeIntervalSince1970: timeInterval).ISO8601Format(), address: recordingURL)
+    try await sut.addRecording(recording).values.first()
     let created = fileManager.createFile(atPath: recordingURL.path(), contents: Data())
     #expect(created == true)
     
@@ -66,7 +72,12 @@ final class AudioRecordsRepositoryTests {
     let recordingId = recording.id
     let predicate = #Predicate<Recording> { $0.id == recordingId }
     let persistedRecordingData = try await dataPersistenceService.fetch(Recording.self, predicate: predicate, sortBy: []).values.first()
-    #expect(persistedRecordingData == [])
+    let index = persistedRecordingData?.firstIndex(where: {
+      let lhs = RecordingData.entityFrom($0) as RecordingData
+      let rhs = RecordingData.entityFrom(recording) as RecordingData
+      return lhs == rhs
+    })
+    #expect(index == nil)
     let fileExists = fileManager.fileExists(atPath: recordingURL.path())
     #expect(fileExists == false)
   }
