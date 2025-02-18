@@ -10,9 +10,9 @@ import Foundation
 
 extension ViewModel {
   class Recording: ObservableObject {
-    @Published var isRecording: Bool = false {
+    @Published var state: RecordingState = .idle {
       didSet {
-        handleIsRecordingFlagChanges()
+        handleStateChange()
       }
     }
     @Published var elapsedTimeString: String = "00:00"
@@ -31,7 +31,9 @@ extension ViewModel {
       // Observe isRecording changes
       self.recordingService.isRecordingPublisher
         .receive(on: DispatchQueue.main)
-        .assign(to: \.isRecording, on: self)
+        .sink(receiveValue: { [weak self] isRecording in
+          self?.handleRecordingServiceStates(isRecording)
+        })
         .store(in: &cancellables)
       // Observe recording finished event
       self.recordingService.recordingFinishedPublisher
@@ -53,10 +55,15 @@ extension ViewModel {
     }
     
     func toggleRecording() {
-      if (isRecording) {
-        recordingService.stopRecording()
-      } else {
-        recordingService.startRecording()
+      isRecording ? recordingService.stopRecording() : recordingService.startRecording()
+    }
+    
+    var isRecording: Bool {
+      switch state {
+      case .start :
+        return true
+      default:
+        return false
       }
     }
     
@@ -70,23 +77,24 @@ extension ViewModel {
       let newRecording = RecordingData(id: id, duration: duration, name: date.ISO8601Format(), address: recordingURL)
       self.recordsRepository.addRecording(newRecording)
         .receive(on: DispatchQueue.main)
-        .sink { _ in
-          // TODO: print and hadle errors here
-        } receiveValue: { [weak self] in
-          guard let self = self else { return }
-          recordingStateChangePublisher.send(.finishedRecording(newRecording))
-        }
+        .sink { [weak self] completion in
+          switch completion {
+          case .failure(let error):
+            self?.state = .finished(.failure(.repository(error)))
+          case .finished:
+            self?.state = .finished(.success(newRecording))
+          }
+        } receiveValue: { _ in }
         .store(in: &cancellables)
     }
     
-    private func handleIsRecordingFlagChanges() {
-      if isRecording {
-        startTimer()
-        recordingStateChangePublisher.send(.beginRecording)
-      } else {
-        stopTimer()
-        // The recordingStateChangePublisher is triggered after adding the recording
-      }
+    private func handleRecordingServiceStates(_ isRecording: Bool) {
+      state = isRecording ? .start : .stop
+    }
+    
+    private func handleStateChange() {
+      isRecording ? startTimer() : stopTimer()
+      recordingStateChangePublisher.send(state)
     }
     
     private func startTimer() {
@@ -121,7 +129,13 @@ extension ViewModel {
 
 extension ViewModel.Recording {
   enum RecordingState {
-    case beginRecording
-    case finishedRecording(any RecordDataEntity)
+    case idle
+    case start
+    case stop
+    case finished(Result<any RecordDataEntity, RecordingError>)
+  }
+  
+  enum RecordingError: Error {
+    case repository(RepositoryError)
   }
 }

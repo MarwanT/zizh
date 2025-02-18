@@ -66,7 +66,10 @@ struct HomeView: View {
           }
           .contentMargins(.bottom, 100, for: .scrollContent)
           .padding(.bottom, 16)
-          RecordingView(viewModel: viewModel.recordingViewModel)
+          VStack {
+            Spacer()
+            RecordingView(viewModel: viewModel.recordingViewModel)
+          }
         }
         .task {
           viewModel.requestPermissions()

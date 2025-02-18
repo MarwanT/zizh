@@ -9,48 +9,50 @@ import SwiftUI
 
 struct RecordingView: View {
   @StateObject var viewModel: ViewModel.Recording
+  @Namespace private var animationNamespace
   
   init(viewModel: ViewModel.Recording = ViewModel.Recording()) {
     _viewModel = StateObject(wrappedValue: viewModel)
   }
   
   var body: some View {
-    VStack {
-      Spacer()
-      // Add recording timer and button in HStack
-      // Modified recording controls
-      ZStack {
-        // Timer positioned to the left
-        HStack {
-          if viewModel.isRecording {
-            Text(viewModel.elapsedTimeString)
-              .font(.system(size: 20, weight: .bold, design: .monospaced))
-              .foregroundColor(.red)
-              .transition(.asymmetric(
-                insertion: .move(edge: .leading).combined(with: .opacity),
-                removal: .opacity
-              ))
-              .padding(.leading, 20)
-            Spacer() // Push timer to left
-          }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal)
-        
-        // Centered record button
-        Button {
-          withAnimation(.easeOut(duration: 1)) {
-            viewModel.toggleRecording()
-          }
-        } label: {
-          RoundedRectangle(cornerRadius: viewModel.isRecording ? 20 : 40)
-            .fill(Color.red)
-            .frame(width: 80, height: 80)
-        }
+    HStack {
+      if viewModel.isRecording {
+        Spacer()
+        Text(viewModel.elapsedTimeString)
+          .font(.system(size: 20, weight: .bold, design: .monospaced))
+          .foregroundColor(.red)
+          .transition(.asymmetric(
+            insertion: .move(edge: .leading).combined(with: .opacity),
+            removal: .opacity
+          ))
+        Spacer()
       }
-      .padding(18)
-      .background(Color.black.opacity(0.6))
+      
+      // Centered record button
+      Button {
+          viewModel.toggleRecording()
+      } label: {
+        RoundedRectangle(cornerRadius: viewModel.isRecording ? 20 : 40)
+          .fill(Color.red)
+          .frame(width: 80, height: 80)
+          .matchedGeometryEffect(id: "recordButton", in: animationNamespace)
+      }
+      .buttonStyle(.plain)
+      .animation(.easeInOut(duration: 0.3), value: viewModel.isRecording)
+      
+      if viewModel.isRecording {
+        Spacer()
+        Text(viewModel.elapsedTimeString)
+          .font(.system(size: 20, weight: .bold, design: .monospaced))
+          .foregroundColor(.red)
+          .opacity(0)
+        Spacer()
+      }
     }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 12)
+    .background(Color.black.opacity(0.6))
   }
 }
 

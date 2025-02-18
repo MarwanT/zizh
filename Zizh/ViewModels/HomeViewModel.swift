@@ -64,10 +64,12 @@ extension ViewModel {
     
     private func handleRecordingStateChange(_ state: ViewModel.Recording.RecordingState) {
       switch state {
-      case .beginRecording:
+      case .finished(let result):
+        if case .success = result {
+          syncRecordings()
+        }
+      default:
         break
-      case .finishedRecording(_):
-        syncRecordings()
       }
     }
     
