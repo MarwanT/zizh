@@ -11,6 +11,7 @@ import Foundation
 
 protocol MediaPlayerService: AnyObject {
   var status: AnyPublisher<MediaPlayerStatus, Never> { get }
+  var alertPublisher: PassthroughSubject<IdentifiableMessages?, Never> { get }
   func play(_ url: URL) -> Result<Bool, MediaPlayerError>
   func play(_ url: URL, mode: PlayMode) -> Result<Bool, MediaPlayerError>
   func stop()
@@ -45,6 +46,7 @@ class AudioPlayerService: NSObject, MediaPlayerService {
   private var audioPlayerNode: AVAudioPlayerNode?
   
   @Published private(set) var currentStatus: MediaPlayerStatus = .stopped
+  let alertPublisher = PassthroughSubject<IdentifiableMessages?, Never>()
   
   init(fileManager: FileManager = .default) {
     self.fileManager = fileManager
@@ -98,7 +100,7 @@ class AudioPlayerService: NSObject, MediaPlayerService {
     guard let audioEngine = audioEngine, let audioPlayerNode = audioPlayerNode else { return }
     
     let timePitch = AVAudioUnitTimePitch()
-    timePitch.rate = rate // 4x slowdown
+    timePitch.rate = rate
     timePitch.pitch = log2(rate) * 1200 // Adjust pitch to avoid robotic sound
     print("Rate: \(rate) ; Pitch: \(timePitch.pitch)")
     
@@ -175,14 +177,14 @@ class AudioPlayerService: NSObject, MediaPlayerService {
 
 extension AudioPlayerService: AVAudioPlayerDelegate {
   func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-    self.currentStatus = .stopped
-    self.audioPlayer = nil
+    currentStatus = .stopped
+    audioPlayer = nil
   }
 
   func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: (any Error)?) {
-    self.currentStatus = .stopped
-    self.audioPlayer = nil
-//    self.audioPlayerAlertMessage = IdentifiableMessages(message: "Audio player audio decoding error occurred")
+    currentStatus = .stopped
+    audioPlayer = nil
+    alertPublisher.send(IdentifiableMessages(message: "Audio player audio decoding error occurred"))
   }
 
   func audioPlayerBeginInterruption(_ player: AVAudioPlayer) {

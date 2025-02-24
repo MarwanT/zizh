@@ -8,7 +8,7 @@
 import Foundation
 import SwiftData
 
-protocol RecordDataEntity: Identifiable, Equatable {
+protocol AudioRecord: Identifiable, Equatable {
   init(id: UUID, duration: TimeInterval, name: String, address: URL, createdAt: Date)
   var createdAt: Date { get set }
   var duration: TimeInterval { get set }
@@ -17,8 +17,8 @@ protocol RecordDataEntity: Identifiable, Equatable {
   var address: URL { get set }
 }
 
-extension RecordDataEntity {
-  static func entityFrom<T: RecordDataEntity>(_ entity: any RecordDataEntity) -> T {
+extension AudioRecord {
+  static func entityFrom<T: AudioRecord>(_ entity: any AudioRecord) -> T {
     return T.init(
       id: entity.id,
       duration: entity.duration,
@@ -30,7 +30,7 @@ extension RecordDataEntity {
 }
 
 @Model
-class Recording: RecordDataEntity {
+class Recording: AudioRecord {
   var createdAt: Date
   var duration: TimeInterval
   var id: UUID
@@ -46,7 +46,7 @@ class Recording: RecordDataEntity {
   }
 }
 
-struct RecordingData: RecordDataEntity {
+struct AudioRecordData: AudioRecord {
   var createdAt: Date
   var duration: TimeInterval
   var id: UUID

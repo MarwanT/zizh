@@ -7,16 +7,16 @@
 
 import SwiftUI
 
-struct RecordingRow: View {
+struct AudioRecordingRow: View {
   @State private var isEditingName: Bool = false
   @State private var recordingName: String
   @FocusState private var nameFieldIsFocused: Bool
   
   let onNameChange: ((UUID, String) -> Void)?
   
-  let recordEntity: any RecordDataEntity
+  let recordEntity: any AudioRecord
   
-  init(recordEntity: any RecordDataEntity, onNameChange: ((UUID, String) -> Void)? = nil) {
+  init(recordEntity: any AudioRecord, onNameChange: ((UUID, String) -> Void)? = nil) {
     self.recordEntity = recordEntity
     self.onNameChange = onNameChange
     recordingName = "\(recordEntity.name)"
@@ -66,13 +66,13 @@ struct RecordingRow: View {
 }
 
 #Preview {
-  let recording = RecordingData(
+  let recording = AudioRecordData(
     id: UUID(),
     duration: 123.45,
     name: "Test Recording",
     address: URL(filePath: "file://zouzou.wave"),
     createdAt: Date()
   )
-  RecordingRow(recordEntity: recording)
+  AudioRecordingRow(recordEntity: recording)
     .background(Color.black)
 }

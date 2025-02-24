@@ -19,7 +19,7 @@ class AudioRecordsRepository: RecordsRepository {
     self.fileManagement = fileManagement
   }
   
-  func addRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
+  func addRecording(_ entity: any AudioRecord) -> AnyPublisher<Void, RepositoryError> {
     var sanitizedData = entity
     sanitizedData.address = makeAddressRelativeIfNeeded(entity.address)
     return Future<Void, RepositoryError> { [weak self] promise in
@@ -47,7 +47,7 @@ class AudioRecordsRepository: RecordsRepository {
     }.eraseToAnyPublisher()
   }
   
-  func updateRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
+  func updateRecording(_ entity: any AudioRecord) -> AnyPublisher<Void, RepositoryError> {
     Future { [weak self] promise in
       Task { @MainActor in
         guard let self else {
@@ -80,7 +80,7 @@ class AudioRecordsRepository: RecordsRepository {
     .eraseToAnyPublisher()
   }
   
-  func deleteRecording(_ entity: any RecordDataEntity) -> AnyPublisher<Void, RepositoryError> {
+  func deleteRecording(_ entity: any AudioRecord) -> AnyPublisher<Void, RepositoryError> {
     return Future<Void, RepositoryError> { [weak self] promise in
       guard let self = self else {
         promise(.failure(.repositoryDeallocated))
@@ -128,8 +128,8 @@ class AudioRecordsRepository: RecordsRepository {
     }.eraseToAnyPublisher()
   }
   
-  func fetchRecords() -> AnyPublisher<[any RecordDataEntity], RepositoryError> {
-    return Future<[any RecordDataEntity], RepositoryError> { [weak self] promise in
+  func fetchRecords() -> AnyPublisher<[any AudioRecord], RepositoryError> {
+    return Future<[any AudioRecord], RepositoryError> { [weak self] promise in
       guard let self = self else {
         promise(.failure(.repositoryDeallocated))
         return
@@ -146,7 +146,7 @@ class AudioRecordsRepository: RecordsRepository {
               break
             }
           } receiveValue: { recordings in
-            promise(.success(recordings.map { RecordingData.entityFrom($0) as RecordingData }))
+            promise(.success(recordings.map { AudioRecordData.entityFrom($0) as AudioRecordData }))
           }
           .store(in: &(self.cancellables))
         

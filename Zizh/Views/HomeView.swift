@@ -20,61 +20,41 @@ struct HomeView: View {
   var body: some View {
     NavigationStack {
       ZStack {
-        Color.black.ignoresSafeArea()
-        ZStack {
-          List {
-            ForEach(viewModel.records, id: \.id) { recording in
-              RecordingRow(recordEntity: recording) { id, newName in
-                Task {
-                  await viewModel.updateRecording(id, name: newName)
-                }
-              }
-              .contentShape(Rectangle())  // Ensures the whole row is tappable
-              .onTapGesture {
-                viewModel.handleRecordingTap(recording)
-              }.listRowBackground(
-                viewModel.currentPlayingId == recording.id ?
-                Color.black :
-                  Color.white.opacity(0.1)
-              )
-            }
-            .onDelete(perform: viewModel.deleteRecording)
-          }
-          .scrollContentBackground(.hidden) // Hides the default List background
-          .background(Color.black)
-          .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-              Button(action: {
-                editedText = "\(viewModel.rate)"
-                isShowingAlert = true
-              }) {
-                Text("\(viewModel.rate, specifier: "%.4f")")
-              }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-              Button(action: {
-                viewModel.toggleSlowMotionOn()
-              }) {
-                Image("sea-turtle")
-                  .renderingMode(.template)
-                  .resizable()           // Makes the image resizable
-                  .scaledToFit()         // Maintains the aspect ratio to fit within the frame
-                  .frame(width: 24, height: 24)
-              }.tint(viewModel.isSlowMotion ? Color.green : Color.gray)
+        AudioRecordingsListView(viewModel: viewModel.audioListViewModel)
+        .toolbar {
+          ToolbarItem(placement: .navigationBarTrailing) {
+            Button(action: {
+              editedText = "\(viewModel.rate)"
+              isShowingAlert = true
+            }) {
+              Text("\(viewModel.rate, specifier: "%.4f")")
             }
           }
-          .contentMargins(.bottom, 100, for: .scrollContent)
-          .padding(.bottom, 16)
-          VStack {
-            Spacer()
-            RecordingView(viewModel: viewModel.recordingViewModel)
+          
+          ToolbarItem(placement: .navigationBarTrailing) {
+            Button(action: {
+              viewModel.toggleSlowMotionOn()
+            }) {
+              Image("sea-turtle")
+                .renderingMode(.template)
+                .resizable()           // Makes the image resizable
+                .scaledToFit()         // Maintains the aspect ratio to fit within the frame
+                .frame(width: 24, height: 24)
+            }.tint(viewModel.isSlowMotion ? Color.green : Color.gray)
           }
         }
-        .task {
-          viewModel.requestPermissions()
-          viewModel.syncRecordings()
+        .contentMargins(.bottom, 100, for: .scrollContent)
+        .padding(.bottom, 16)
+        VStack {
+          Spacer()
+          RecordingControlsView(viewModel: viewModel.recordingControlsViewModel)
         }
+      }
+      .padding(.bottom, 18)
+      .ignoresSafeArea(.all, edges: .bottom)
+      .task {
+        viewModel.requestPermissions()
+        try? await viewModel.syncRecordings().async()
       }
       .alert(item: $viewModel.deletionErrorMessage) { errorMessage in
         Alert(title: Text("Error"), message: Text(errorMessage.message), dismissButton: .default(Text("OK")))
@@ -98,5 +78,5 @@ struct HomeView: View {
 }
 
 #Preview {
-  HomeView(viewModel: ViewModel.Home.preview)
+  HomeView(viewModel: ViewModel.Home())
 }

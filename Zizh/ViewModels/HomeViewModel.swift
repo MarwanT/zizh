@@ -12,36 +12,58 @@ import Combine
 extension ViewModel {
   class Home: NSObject, ObservableObject {
     @Published private(set) var isSlowMotion: Bool = false
-    @Published private(set) var currentPlayingId: UUID? = nil
-   
-    @Published var records: [any RecordDataEntity] = []
     @Published var deletionErrorMessage: IdentifiableMessages? = nil
     @Published var audioPlayerAlertMessage: IdentifiableMessages? = nil
-    
     @Published var rate: Float = 1/6.0
+
+    let recordingControlsViewModel: ViewModel.RecordingControls
+    let audioListViewModel: ViewModel.AudioList
+    private let fileManagement: FileManagement
+    private let mediaPlayer: MediaPlayerService
     
-    let recordingViewModel: ViewModel.Recording
-    
-    private var recordsRepository: (any RecordsRepository)!
-    private var mediaPlayer: MediaPlayerService
+    private(set) var currentlyPlayingAudio: (any AudioRecord)? {
+      didSet {
+        audioListViewModel.highlightedRecording = currentlyPlayingAudio?.id
+      }
+    }
     private var cancellables: Set<AnyCancellable> = []
     
-    private var audioPlayer: AVAudioPlayer?
-    private var audioEngine: AVAudioEngine?
-    private var audioPlayerNode: AVAudioPlayerNode?
-    
-    init (recordingService: RecordingService? = nil, recordsRepository: RecordsRepository? = nil, mediaPlayer: MediaPlayerService = AudioPlayerService()) {
-      self.recordsRepository = try? recordsRepository ?? AudioRecordsRepository()
+    init (
+      recordingControlsViewModel: ViewModel.RecordingControls? = nil,
+      audioListViewModel: ViewModel.AudioList? = nil,
+      recordingService: RecordingService? = nil,
+      recordsRepository: RecordsRepository? = nil,
+      fileManagement: FileManagement = DefaultFileManagement(),
+      mediaPlayer: MediaPlayerService = AudioPlayerService()
+    ) {
+      self.fileManagement = fileManagement
       self.mediaPlayer = mediaPlayer
-      self.recordingViewModel = ViewModel.Recording(recordingService: recordingService, recordsRepository: self.recordsRepository)
+      let recordsRepository = try? recordsRepository ?? AudioRecordsRepository(fileManagement: fileManagement)
+      let recordingService = try? recordingService ?? AudioRecordingService(fileManagement: fileManagement)
+      self.audioListViewModel = audioListViewModel ?? ViewModel.AudioList(recordsRepository: recordsRepository)
+      self.recordingControlsViewModel = recordingControlsViewModel ?? ViewModel.RecordingControls(recordingService: recordingService, recordsRepository: recordsRepository)
       super.init()
       
       // Observer Recording changes
-      recordingViewModel.recordingStateChangePublisher
+      self.recordingControlsViewModel.recordingStateChangePublisher
         .receive(on: DispatchQueue.main)
         .sink { [weak self] state in
           self?.handleRecordingStateChange(state)
         }
+        .store(in: &cancellables)
+      
+      // Observe list rows taps
+      self.audioListViewModel.tapRecordingPublisher
+        .receive(on: DispatchQueue.main)
+        .sink { recording in
+          self.handleRecordingRowTap(recording)
+        }
+        .store(in: &cancellables)
+      
+      // Observe list actions errors
+      self.audioListViewModel.alertPublisher
+        .receive(on: DispatchQueue.main)
+        .assign(to: \.deletionErrorMessage, on: self)
         .store(in: &cancellables)
       
       // Observe playback changes
@@ -51,10 +73,16 @@ extension ViewModel {
           self?.handleMediaPlayerEvents(status)
         }
         .store(in: &cancellables)
+      
+      // Observer playback errors
+      self.mediaPlayer.alertPublisher
+        .receive(on: DispatchQueue.main)
+        .assign(to: \.audioPlayerAlertMessage, on: self)
+        .store(in: &cancellables)
     }
     
     func requestPermissions() {
-      recordingViewModel.requestPermission()
+      recordingControlsViewModel.requestPermission()
         .receive(on: DispatchQueue.main)
         .sink { granted in
           // TODO: Handle the granted/ungranted permission to the microphone
@@ -62,26 +90,21 @@ extension ViewModel {
         .store(in: &cancellables)
     }
     
-    private func handleRecordingStateChange(_ state: ViewModel.Recording.RecordingState) {
+    private func handleRecordingStateChange(_ state: ViewModel.RecordingControls.RecordingState) {
       switch state {
       case .finished(let result):
         if case .success = result {
           syncRecordings()
+            .sink { _ in  } receiveValue: { _ in }
+            .store(in: &cancellables)
         }
       default:
         break
       }
     }
     
-    func syncRecordings() {
-      recordsRepository.fetchRecords()
-        .receive(on: DispatchQueue.main)
-        .sink(receiveCompletion: { completion in
-          print("Syncing is completed")
-        }, receiveValue: { [weak self] recordings in
-          self?.records = recordings
-        })
-        .store(in: &cancellables)
+    func syncRecordings() -> AnyPublisher<Void, ViewModel.AudioList.AudioListError> {
+      return audioListViewModel.syncRecordings()
     }
     
     func toggleSlowMotionOn() {
@@ -89,65 +112,18 @@ extension ViewModel {
       stopPlayingRecording()
     }
     
-    
-    func deleteRecording(at offsets: IndexSet) {
-      for index in offsets {
-        let recording = records[index]
-        recordsRepository.deleteRecording(recording)
-          .receive(on: DispatchQueue.main)
-          .sink { [weak self] completion in
-            switch completion {
-            case .failure(let error):
-              switch error {
-              case .repositoryDeallocated:
-                self?.deletionErrorMessage = IdentifiableMessages(message: "Failed to delete recording for repository is deallocated!")
-              case .deletionFailed(_):
-                print("Failed to delete recording: \(error)")
-                self?.deletionErrorMessage = IdentifiableMessages(message: "Failed to delete recording: \(error.localizedDescription)")
-              default:
-                break
-              }
-            case .finished:
-              guard let self = self else { return }
-              self.records.remove(at: index)
-            }
-          } receiveValue: { _ in }
-          .store(in: &cancellables)
+    private func handleRecordingRowTap(_ entity: any AudioRecord) {
+      if currentlyPlayingAudio?.id == entity.id {
+        stopPlayingRecording()
+      } else {
+        stopPlayingRecording()
+        currentlyPlayingAudio = entity
+        playRecording(entity)
       }
     }
     
-    func handleRecordingTap(_ entity: any RecordDataEntity) {
-      togglePlayPause(entity)
-    }
-    
-    func updateRecording(_ recordingId: UUID, name: String) async {
-      guard var recording = records.first(where: { $0.id == recordingId }) else {
-        return
-      }
-      recording.name = name
-      do {
-        // Convert the publisher to an async sequence and await its completion
-        try await recordsRepository.updateRecording(recording)
-          .mapError { $0 as Error } // Convert RepositoryError to Error
-          .values
-          .first(where: { _ in true }) // Wait for the first value (completion)
-        
-        // Ensure UI updates are on the main thread
-        await MainActor.run {
-          syncRecordings()
-        }
-      } catch {
-        print("Failed to update recording: \(error)")
-        // Handle the error here
-      }
-    }
-    
-    private func togglePlayPause(_ entity: any RecordDataEntity) {
-      currentPlayingId != nil ? stopPlayingRecording() : playRecording(entity)
-    }
-    
-    private func playRecording(_ entity: any RecordDataEntity) {
-      let absoluteURL = recordsRepository.fileManagement.makeAbsoluteURL(entity.address)
+    private func playRecording(_ entity: any AudioRecord) {
+      let absoluteURL = fileManagement.makeAbsoluteURL(entity.address)
       let result = isSlowMotion ? mediaPlayer.play(absoluteURL, mode: .slowMotion(rate)) : mediaPlayer.play(absoluteURL)
       switch result {
       case .success(_):
@@ -166,40 +142,12 @@ extension ViewModel {
       print("Media Player Status Changed: \(status)")
       switch status {
       case let .playing(url):
-        currentPlayingId = recordingFromURL(url)?.id
+        fallthrough
       case let .paused(url):
-        currentPlayingId = recordingFromURL(url)?.id
+        currentlyPlayingAudio = audioListViewModel.recordingFromURL(url)
       case .stopped:
-        currentPlayingId = nil
+        currentlyPlayingAudio = nil
       }
     }
-    
-    private func recordingFromURL(_ url: URL) -> (any RecordDataEntity)? {
-      let relativeURL = try? recordsRepository.fileManagement.makeRelativeURL(url)
-      return records.first { $0.address == relativeURL }
-    }
   }
-}
-
-extension ViewModel.Home {
-  class ViewModelHomePreview: ViewModel.Home {
-    override func syncRecordings() {
-      self.records = [
-        RecordingData(duration: 10, name: "Sample Recording", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording2", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording3", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording4", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording5", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording6", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording7", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording8", address: URL(fileURLWithPath: "/zouzou/marwan")),
-        RecordingData(duration: 10, name: "Sample Recording9", address: URL(fileURLWithPath: "/zouzou/marwan")),
-      ]
-    }
-  }
-  
-  static let preview: ViewModel.Home = {
-    let viewModel = ViewModelHomePreview()
-    return viewModel as ViewModel.Home
-  }()
 }

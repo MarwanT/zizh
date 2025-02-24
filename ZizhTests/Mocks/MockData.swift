@@ -9,10 +9,10 @@ import Foundation
 @testable import Zizh
 
 class MockData: AnyObject {
-  static func recordingsData(count: Int) -> [any RecordDataEntity] {
-    var recordings: [any RecordDataEntity] = []
+  static func recordingsData(count: Int) -> [any AudioRecord] {
+    var recordings: [any AudioRecord] = []
     for index in 0..<count {
-      let recording = RecordingData(
+      let recording = AudioRecordData(
         duration: 10 + Double(index),
         name: "Test Recording \(index)",
         address: URL(string: "https://example.com/audio\(index).m4a")!

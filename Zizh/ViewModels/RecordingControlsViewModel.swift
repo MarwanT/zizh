@@ -1,5 +1,5 @@
 //
-//  RecordingViewModel.swift
+//  RecordingControlsViewModel.swift
 //  Zizh
 //
 //  Created by Marwan Tutunji on 17/02/2025.
@@ -9,7 +9,7 @@ import Combine
 import Foundation
 
 extension ViewModel {
-  class Recording: ObservableObject {
+  class RecordingControls: ObservableObject {
     @Published var state: RecordingState = .idle {
       didSet {
         handleStateChange()
@@ -74,7 +74,7 @@ extension ViewModel {
       }
       let date = Date(timeIntervalSince1970: timeInterval)
       let duration = await self.recordingService.getRecordingDuration(url: recordingURL)
-      let newRecording = RecordingData(id: id, duration: duration, name: date.ISO8601Format(), address: recordingURL)
+      let newRecording = AudioRecordData(id: id, duration: duration, name: date.ISO8601Format(), address: recordingURL)
       self.recordsRepository.addRecording(newRecording)
         .receive(on: DispatchQueue.main)
         .sink { [weak self] completion in
@@ -127,12 +127,22 @@ extension ViewModel {
   }
 }
 
-extension ViewModel.Recording {
-  enum RecordingState {
+extension ViewModel.RecordingControls {
+  enum RecordingState: Equatable {
     case idle
     case start
     case stop
-    case finished(Result<any RecordDataEntity, RecordingError>)
+    case finished(Result<any AudioRecord, RecordingError>)
+    
+    static func == (lhs: RecordingState, rhs: RecordingState) -> Bool {
+      switch (lhs, rhs) {
+      case (.idle, .idle), (.start, .start), (.stop, .stop), (.finished, .finished):
+        return true
+      default:
+        // TODO: Improve equatable for the .finished state
+        return false
+      }
+    }
   }
   
   enum RecordingError: Error {

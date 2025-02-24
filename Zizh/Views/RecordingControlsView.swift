@@ -1,5 +1,5 @@
 //
-//  RecordingView.swift
+//  RecordingControlsView.swift
 //  Zizh
 //
 //  Created by Marwan Tutunji on 17/02/2025.
@@ -7,11 +7,11 @@
 
 import SwiftUI
 
-struct RecordingView: View {
-  @StateObject var viewModel: ViewModel.Recording
+struct RecordingControlsView: View {
+  @StateObject var viewModel: ViewModel.RecordingControls
   @Namespace private var animationNamespace
   
-  init(viewModel: ViewModel.Recording = ViewModel.Recording()) {
+  init(viewModel: ViewModel.RecordingControls = ViewModel.RecordingControls()) {
     _viewModel = StateObject(wrappedValue: viewModel)
   }
   
@@ -57,5 +57,5 @@ struct RecordingView: View {
 }
 
 #Preview {
-  RecordingView()
+  RecordingControlsView()
 }

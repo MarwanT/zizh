@@ -47,8 +47,8 @@ final class AudioRecordsRepositoryTests {
     print("Persisted Recording Data: \(persistedRecordingData ?? []) id: \(persistedRecordingData!.count)")
     #expect(persistedRecordingData != [])
     let index = persistedRecordingData?.firstIndex(where: {
-      let lhs = RecordingData.entityFrom($0) as RecordingData
-      let rhs = RecordingData.entityFrom(recording) as RecordingData
+      let lhs = AudioRecordData.entityFrom($0) as AudioRecordData
+      let rhs = AudioRecordData.entityFrom(recording) as AudioRecordData
       return lhs == rhs
     })
     #expect(index != nil)
@@ -73,8 +73,8 @@ final class AudioRecordsRepositoryTests {
     let predicate = #Predicate<Recording> { $0.id == recordingId }
     let persistedRecordingData = try await dataPersistenceService.fetch(Recording.self, predicate: predicate, sortBy: []).values.first()
     let index = persistedRecordingData?.firstIndex(where: {
-      let lhs = RecordingData.entityFrom($0) as RecordingData
-      let rhs = RecordingData.entityFrom(recording) as RecordingData
+      let lhs = AudioRecordData.entityFrom($0) as AudioRecordData
+      let rhs = AudioRecordData.entityFrom(recording) as AudioRecordData
       return lhs == rhs
     })
     #expect(index == nil)
