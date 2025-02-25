@@ -15,7 +15,7 @@ struct AudioRecordingsListView: View {
       ForEach(viewModel.records, id: \.id) { recording in
         AudioRecordingRow(recordEntity: recording) { id, newName in
           Task {
-            await viewModel.updateRecording(id, name: newName)
+            try await viewModel.updateRecording(id, name: newName).async()
           }
         }
         .contentShape(Rectangle())  // Ensures the whole row is tappable

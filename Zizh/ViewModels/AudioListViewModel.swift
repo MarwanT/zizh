@@ -10,6 +10,7 @@ import Foundation
 
 extension ViewModel {
   class AudioList: ObservableObject {
+    private let recordsQueue = DispatchQueue(label: "com.zizh.AudioList.recordsQueue")
     @Published var records: [any AudioRecord] = []
     @Published var highlightedRecording: UUID? = nil
     private(set) var alertPublisher: PassthroughSubject<IdentifiableMessages?, Never> = .init()
@@ -27,7 +28,7 @@ extension ViewModel {
     func syncRecordings() -> AnyPublisher<Void, AudioListError> {
       return recordsRepository.fetchRecords()
         .map({ [weak self] recordings in
-          self?.records = recordings
+          self?.modifyRecordThreadSafely(.setting(recordings))
           return ()
         })
         .mapError({ repoError in
@@ -37,32 +38,41 @@ extension ViewModel {
         .eraseToAnyPublisher()
     }
     
-    func updateRecording(_ recordingId: UUID, name: String) async {
+    func modifyRecordThreadSafely(_ action: RecordsDataAction) {
+      recordsQueue.sync {
+        switch action {
+          case .deleting(let id):
+          self.records.remove(at: id)
+        case .setting(let newRecords):
+          self.records = newRecords
+        }
+      }
+    }
+    
+    func updateRecording(_ recordingId: UUID, name: String) -> AnyPublisher<Void, AudioListError> {
       guard var recording = records.first(where: { $0.id == recordingId }) else {
-        return
+        return Fail<Void, AudioListError>(error: .recordingNotFound).eraseToAnyPublisher()
       }
       recording.name = name
-      do {
-        // Convert the publisher to an async sequence and await its completion
-        try await recordsRepository.updateRecording(recording)
-          .mapError { $0 as Error } // Convert RepositoryError to Error
-          .values
-          .first(where: { _ in true }) // Wait for the first value (completion)
-        
-        // Ensure UI updates are on the main thread
-        await MainActor.run {
-          syncRecordings()
-            .sink { _ in  } receiveValue: { _ in }
-            .store(in: &cancellables)
+      return recordsRepository.updateRecording(recording)
+        .mapError { error -> AudioListError in
+          return .couldNotUpdateRecord(error)
         }
-      } catch {
-        print("Failed to update recording: \(error)")
-        // Handle the error here
-      }
+        .flatMap { [weak self] _ -> AnyPublisher<Void, AudioListError> in
+          guard let self = self else {
+            return Fail<Void, AudioListError>(error: .couldNotUpdateRecord(nil)).eraseToAnyPublisher()
+          }
+          return self.syncRecordings()
+        }
+        .eraseToAnyPublisher()
     }
     
     func deleteRecording(at offsets: IndexSet) {
       for index in offsets {
+        guard index < records.count else {
+          alertPublisher.send(IdentifiableMessages(message: "Failed to delete unrecognized recording"))
+          continue
+        }
         let recording = records[index]
         recordsRepository.deleteRecording(recording)
           .receive(on: DispatchQueue.main)
@@ -80,7 +90,7 @@ extension ViewModel {
               }
             case .finished:
               guard let self = self else { return }
-              self.records.remove(at: index)
+              self.modifyRecordThreadSafely(.deleting(index))
             }
           } receiveValue: { _ in }
           .store(in: &cancellables)
@@ -102,5 +112,13 @@ extension ViewModel {
 extension ViewModel.AudioList {
   enum AudioListError: Error {
     case couldNotSyncRecords(RepositoryError)
+    case couldNotUpdateRecord(RepositoryError?)
+    case recordingNotFound
+    case indexOutOfBounds
+  }
+  
+  enum RecordsDataAction {
+    case setting(_ records: [any AudioRecord])
+    case deleting(_ index: Int)
   }
 }

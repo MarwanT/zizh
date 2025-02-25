@@ -21,5 +21,5 @@ enum RepositoryError: Error {
   case noRecordsFound
   case repositoryDeallocated
   case dataPersistence(DataPersistenceError)
-  case unknown(Error)
+  case unknown(Error?)
 }

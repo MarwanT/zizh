@@ -9,8 +9,8 @@ import Foundation
 @testable import Zizh
 
 class MockData: AnyObject {
-  static func recordingsData(count: Int) -> [any AudioRecord] {
-    var recordings: [any AudioRecord] = []
+  static func recordingsData(count: Int) -> [AudioRecordData] {
+    var recordings: [AudioRecordData] = []
     for index in 0..<count {
       let recording = AudioRecordData(
         duration: 10 + Double(index),
